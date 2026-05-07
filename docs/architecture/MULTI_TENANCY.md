@@ -324,3 +324,35 @@ graph TB
 | 3 | `@Async` MUST use `@Async("taskExecutor")` | Async tasks run without tenant |
 | 4 | `disableFilter` ONLY in `Admin*` classes | Cross-tenant data exposure |
 | 5 | `spring.threads.virtual.enabled=false` | ThreadLocal breaks with virtual threads |
+| 6 | Service MUST call `TenantContext.getTenantId()` when **creating** entities | `business_id` saved as null → constraint fail or orphaned data |
+
+## 10. TenantContext Usage in Service Layer
+
+Hibernate filter handles **reads** automatically — service layer does not need `tenantId` for queries.
+
+**Writes require explicit set:**
+
+```java
+// READ — no tenantId needed, filter applies automatically
+public List<Member> listMembers() {
+    return memberRepository.findAll(); // Hibernate adds: WHERE business_id = ?
+}
+
+// WRITE — must set businessId on new entity
+public Member createMember(CreateMemberRequest req) {
+    UUID tenantId = TenantContext.getTenantId(); // required
+    Member member = new Member();
+    member.setBusinessId(tenantId);              // must set before save
+    member.setEmail(req.email());
+    return memberRepository.save(member);
+}
+```
+
+**Other cases that need `TenantContext.getTenantId()` in service:**
+
+| Case | Reason |
+|------|--------|
+| Create any entity | Set `business_id` before `repository.save()` |
+| Quota enforcement | `COUNT(*) WHERE business_id = ?` for plan limits |
+| Audit logging | Record `tenantId` in audit entry |
+| Cross-entity validation | Verify invitation token belongs to current tenant |

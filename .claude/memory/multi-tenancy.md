@@ -159,6 +159,31 @@ Any other usage is a security violation.
 
 ---
 
+## Service layer usage of TenantContext
+
+Hibernate filter handles **reads** automatically — service does not need tenantId for queries.
+**Writes MUST set businessId explicitly:**
+
+```java
+// READ — no tenantId needed
+public List<Member> listMembers() {
+    return memberRepository.findAll(); // filter auto-applies
+}
+
+// WRITE — must fetch and set
+public Member createMember(CreateMemberRequest req) {
+    UUID tenantId = TenantContext.getTenantId(); // required
+    Member member = new Member();
+    member.setBusinessId(tenantId);              // must set before save
+    member.setEmail(req.email());
+    return memberRepository.save(member);
+}
+```
+
+Other cases needing `TenantContext.getTenantId()` in service: quota checks, audit logging, cross-entity validation.
+
+---
+
 ## Critical rules (enforce on every PR)
 
 1. Every business entity MUST extend `TenantEntity`
@@ -166,3 +191,4 @@ Any other usage is a security violation.
 3. `@Async` methods MUST declare `@Async("taskExecutor")` — not bare `@Async`
 4. `disableFilter` is ONLY allowed in `Admin*` repository classes
 5. `spring.threads.virtual.enabled=false` — virtual threads break ThreadLocal scoping
+6. Service MUST call `TenantContext.getTenantId()` when creating entities — Hibernate filter does NOT auto-set `business_id` on save
