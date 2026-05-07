@@ -1,10 +1,20 @@
 package com.leonardtrinh.supportsaas.auth;
 
+import com.leonardtrinh.supportsaas.member.Member;
+
+import java.util.UUID;
+
 public interface JwtService {
 
-    JwtClaims validateToken(String token);
+    String generateAccessToken(Member member);
 
-    String generateAccessToken(JwtClaims claims);
+    String generateRefreshToken(Member member);
 
-    String generateRefreshToken(JwtClaims claims);
+    JwtClaims validateAccessToken(String token);
+
+    Member validateRefreshToken(String token);
+
+    String rotateRefreshToken(String oldToken, Member member);
+
+    void revokeAllRefreshTokens(UUID memberId);
 }
