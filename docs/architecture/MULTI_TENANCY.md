@@ -51,7 +51,7 @@ graph TB
     UB -->|Bearer JWT-B| F
     F -->|setTenantId| TC
     F --> C --> S --> R
-    R -->|@Before intercept| FA
+    R -->|AOP intercept| FA
     FA -->|getTenantId| TC
     FA -->|enableFilter| H
     H -->|WHERE business_id = A| T1
@@ -84,7 +84,7 @@ sequenceDiagram
     JwtAuthFilter->>Controller: doFilter()
     Controller->>Repository: findAll()
 
-    Note over TenantFilterAspect: @Before AOP intercept
+    Note over TenantFilterAspect: AOP Before intercept
     TenantFilterAspect->>TenantContext: getTenantId()
     TenantContext-->>TenantFilterAspect: "biz-A"
     TenantFilterAspect->>Hibernate: enableFilter("tenantFilter", "biz-A")
@@ -163,7 +163,7 @@ sequenceDiagram
     participant T2 as Async Thread (T2)
 
     HTTP->>HTTP: TenantContext = "biz-A"
-    HTTP->>Decorator: submit @Async task
+    HTTP->>Decorator: submit Async task
 
     Note over Decorator: capture BEFORE hand-off
     Decorator->>Decorator: tenantId = TenantContext.get() → "biz-A"
@@ -199,8 +199,8 @@ classDiagram
     class TenantEntity {
         <<MappedSuperclass>>
         UUID businessId
-        +@FilterDef tenantFilter
-        +@Filter business_id = :tenantId
+        +FilterDef tenantFilter
+        +Filter business_id = :tenantId
     }
 
     class Business {
