@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: spring-saas-support-ai
+  threads:
+    virtual:
+      # ThreadLocal-based TenantContext requires virtual threads disabled
+      # until ScopedValue (JEP 446) is stable and adopted by Spring
+      enabled: false
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  mvc:
+    problemdetails:
+      enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
