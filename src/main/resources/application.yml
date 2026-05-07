@@ -14,6 +14,9 @@ spring:
     problemdetails:
       enabled: true
 
+  profiles:
+    active: dev
+
 management:
   endpoints:
     web:
@@ -28,3 +31,8 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+jwt:
+  secret: ${JWT_SECRET:dGhpcyBpcyBhIHNlY3JldCBrZXkgZm9yIGRldmVsb3BtZW50IG9ubHkhISE=}
+  access-token-expiration-ms: 900000
+  refresh-token-expiration-ms: 604800000
