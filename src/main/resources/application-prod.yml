@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: 22
+      minimum-idle: 5
+      connection-timeout: 30000
+  flyway:
+    locations: classpath:db/migration
+
+logging:
+  level:
+    root: WARN
+    com.leonardtrinh.supportsaas: INFO
