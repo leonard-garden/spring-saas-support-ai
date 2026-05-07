@@ -33,19 +33,18 @@ graph TB
     end
 
     subgraph "Spring Boot App"
-        direction TB
         F[JwtAuthFilter]
-        TC[TenantContext\nThreadLocal]
+        TC["TenantContext<br/>ThreadLocal"]
         C[Controller]
         S[Service]
         R[Repository]
-        FA[TenantFilterAspect\nAOP]
+        FA["TenantFilterAspect<br/>AOP"]
         H[Hibernate ORM]
     end
 
     subgraph "PostgreSQL"
-        T1[(members\nbusiness_id = A)]
-        T2[(members\nbusiness_id = B)]
+        T1[("members<br/>business_id = A")]
+        T2[("members<br/>business_id = B")]
     end
 
     UA -->|Bearer JWT-A| F
@@ -110,9 +109,9 @@ sequenceDiagram
 graph LR
     subgraph "Thread Pool"
         direction TB
-        T1[Thread 1\ntenantId = biz-A]
-        T2[Thread 2\ntenantId = biz-B]
-        T3[Thread 3\ntenantId = null]
+        T1["Thread 1<br/>tenantId = biz-A"]
+        T2["Thread 2<br/>tenantId = biz-B"]
+        T3["Thread 3<br/>tenantId = null"]
     end
 
     subgraph "ThreadLocal storage per thread"
