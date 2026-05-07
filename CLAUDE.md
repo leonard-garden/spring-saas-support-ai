@@ -8,6 +8,7 @@
 @.claude/memory/architecture.md
 @.claude/memory/tech-stack.md
 @.claude/memory/constraints.md
+@.claude/memory/multi-tenancy.md
 
 ---
 
