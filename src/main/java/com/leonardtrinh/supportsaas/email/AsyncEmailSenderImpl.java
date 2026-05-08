@@ -1,23 +1,24 @@
-package com.leonardtrinh.supportsaas.auth;
+package com.leonardtrinh.supportsaas.email;
 
-import com.leonardtrinh.supportsaas.email.EmailService;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
-public class EmailSender {
+public class AsyncEmailSenderImpl implements AsyncEmailSender {
 
     private final EmailService emailService;
 
-    public EmailSender(EmailService emailService) {
+    public AsyncEmailSenderImpl(EmailService emailService) {
         this.emailService = emailService;
     }
 
+    @Override
     @Async("taskExecutor")
     public void sendPasswordResetAsync(String email, String token) {
         emailService.sendPasswordResetEmail(email, token);
     }
 
+    @Override
     @Async("taskExecutor")
     public void sendEmailVerificationAsync(String email, String token) {
         emailService.sendEmailVerificationEmail(email, token);

@@ -144,6 +144,38 @@ auditLogRepository.save(entry);
 
 ---
 
+## Async wrapper beans must have an interface
+
+Any `@Service` bean that exists solely to add `@Async` behavior around another service MUST declare an interface.
+Without an interface, callers cannot be unit-tested (Mockito can mock concrete classes but it is fragile),
+and the implementation cannot be swapped or decorated.
+
+```
+AsyncEmailSender          (interface — defines contract)
+AsyncEmailSenderImpl      (implementation — @Service, @Async methods)
+```
+
+Caller injects the interface, not the concrete class:
+
+```java
+// GOOD
+private final AsyncEmailSender emailSender;
+
+// BAD — concrete class leaks into caller
+private final EmailSender emailSender;
+```
+
+Also: async wrapper beans belong in the package that owns the abstraction (`email/`), not in the package
+of their caller (`auth/`). Placing them in the caller's package makes reuse by other features impossible.
+
+```bash
+# Detect @Service without interface pair
+grep -rn "@Service" src/main/java --include="*.java" -l
+# For each: verify an interface exists with the same name minus "Impl"
+```
+
+---
+
 ## Integration tests: use Apache HttpClient, not JDK HttpURLConnection
 
 JDK `HttpURLConnection` (TestRestTemplate default) throws `HttpRetryException` when a POST request
