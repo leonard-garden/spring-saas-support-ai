@@ -1,7 +1,11 @@
 package com.leonardtrinh.supportsaas.auth;
 
-public class InvalidTokenException extends RuntimeException {
+import com.leonardtrinh.supportsaas.common.AppException;
+import org.springframework.http.HttpStatus;
+
+public class InvalidTokenException extends AppException {
+
     public InvalidTokenException(String message) {
-        super(message);
+        super(HttpStatus.UNAUTHORIZED, "AUTH_INVALID_TOKEN", message);
     }
 }
