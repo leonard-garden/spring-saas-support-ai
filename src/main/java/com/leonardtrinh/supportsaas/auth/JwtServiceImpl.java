@@ -111,6 +111,12 @@ public class JwtServiceImpl implements JwtService {
         refreshTokenRepository.revokeAllByMemberId(memberId, Instant.now());
     }
 
+    @Override
+    @Transactional
+    public void revokeRefreshToken(String rawToken) {
+        refreshTokenRepository.revokeByTokenHash(sha256Hex(rawToken), Instant.now());
+    }
+
     static String sha256Hex(String input) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
