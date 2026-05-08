@@ -22,8 +22,9 @@ public class AuditLog {
     @Column(name = "impersonator_id")
     private UUID impersonatorId;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 100)
-    private String action;
+    private AuditAction action;
 
     @Column(name = "resource_type", length = 100)
     private String resourceType;
@@ -38,7 +39,7 @@ public class AuditLog {
     public UUID getBusinessId() { return businessId; }
     public UUID getMemberId() { return memberId; }
     public UUID getImpersonatorId() { return impersonatorId; }
-    public String getAction() { return action; }
+    public AuditAction getAction() { return action; }
     public String getResourceType() { return resourceType; }
     public UUID getResourceId() { return resourceId; }
     public Instant getCreatedAt() { return createdAt; }
@@ -46,7 +47,7 @@ public class AuditLog {
     public void setBusinessId(UUID businessId) { this.businessId = businessId; }
     public void setMemberId(UUID memberId) { this.memberId = memberId; }
     public void setImpersonatorId(UUID impersonatorId) { this.impersonatorId = impersonatorId; }
-    public void setAction(String action) { this.action = action; }
+    public void setAction(AuditAction action) { this.action = action; }
     public void setResourceType(String resourceType) { this.resourceType = resourceType; }
     public void setResourceId(UUID resourceId) { this.resourceId = resourceId; }
 }
