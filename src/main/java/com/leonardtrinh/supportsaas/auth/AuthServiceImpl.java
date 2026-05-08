@@ -10,6 +10,7 @@ import com.leonardtrinh.supportsaas.member.MemberRepository;
 import com.leonardtrinh.supportsaas.member.Role;
 import com.leonardtrinh.supportsaas.tenant.Business;
 import com.leonardtrinh.supportsaas.tenant.BusinessRepository;
+import com.leonardtrinh.supportsaas.email.AsyncEmailSender;
 import com.leonardtrinh.supportsaas.tenant.TenantContext;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -37,7 +38,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuditLogger auditLogger;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
-    private final EmailSender emailSender;
+    private final AsyncEmailSender emailSender;
 
     public AuthServiceImpl(
             MemberRepository memberRepository,
@@ -49,7 +50,7 @@ public class AuthServiceImpl implements AuthService {
             AuditLogger auditLogger,
             PasswordResetTokenRepository passwordResetTokenRepository,
             EmailVerificationTokenRepository emailVerificationTokenRepository,
-            EmailSender emailSender) {
+            AsyncEmailSender emailSender) {
         this.memberRepository = memberRepository;
         this.businessRepository = businessRepository;
         this.planRepository = planRepository;
