@@ -5,6 +5,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -22,6 +24,7 @@ public class AuditLogger {
     }
 
     @Async("taskExecutor")
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logLoginAsync(UUID memberId, UUID businessId) {
         try {
             jdbcTemplate.update(
