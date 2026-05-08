@@ -110,3 +110,25 @@ grep -rn "import.*Repository" src/main/java --include="*.java" \
 ```
 
 Controller chỉ được import Service interface.
+
+---
+
+## Rule 8 — @Async methods that write to DB must use @Transactional(REQUIRES_NEW)
+
+`@Async` runs on a separate thread — no transaction from the caller propagates.
+Without an explicit `@Transactional`, JdbcTemplate/JPA uses auto-commit (implicit, no rollback on failure).
+
+```bash
+# Find @Async methods missing @Transactional
+grep -B2 "@Async" src/main/java/**/*.java | grep -v "@Transactional"
+```
+
+Every `@Async` method that calls `jdbcTemplate.update`, `repository.save`, or any DB write MUST declare:
+
+```java
+@Async("taskExecutor")
+@Transactional(propagation = Propagation.REQUIRES_NEW)
+public void someAsyncWriteMethod(...) { ... }
+```
+
+`REQUIRES_NEW` is required (not `REQUIRED`) to make intent explicit: always own transaction, independent of caller.
