@@ -14,9 +14,13 @@ import com.leonardtrinh.supportsaas.tenant.TenantContext;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Base64;
 import java.util.regex.Pattern;
 
 @Service
@@ -31,6 +35,9 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final AuditLogger auditLogger;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final EmailVerificationTokenRepository emailVerificationTokenRepository;
+    private final EmailSender emailSender;
 
     public AuthServiceImpl(
             MemberRepository memberRepository,
@@ -39,7 +46,10 @@ public class AuthServiceImpl implements AuthService {
             SubscriptionRepository subscriptionRepository,
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
-            AuditLogger auditLogger) {
+            AuditLogger auditLogger,
+            PasswordResetTokenRepository passwordResetTokenRepository,
+            EmailVerificationTokenRepository emailVerificationTokenRepository,
+            EmailSender emailSender) {
         this.memberRepository = memberRepository;
         this.businessRepository = businessRepository;
         this.planRepository = planRepository;
@@ -47,6 +57,9 @@ public class AuthServiceImpl implements AuthService {
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.auditLogger = auditLogger;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.emailVerificationTokenRepository = emailVerificationTokenRepository;
+        this.emailSender = emailSender;
     }
 
     @Override
@@ -81,6 +94,24 @@ public class AuthServiceImpl implements AuthService {
         subscription.setStatus(SubscriptionStatus.TRIALING);
         subscription.setTrialEndsAt(Instant.now().plus(14, ChronoUnit.DAYS));
         subscriptionRepository.save(subscription);
+
+        byte[] verifyBytes = new byte[32];
+        new SecureRandom().nextBytes(verifyBytes);
+        String verifyPlaintext = Base64.getUrlEncoder().withoutPadding().encodeToString(verifyBytes);
+        EmailVerificationToken verificationToken = new EmailVerificationToken();
+        verificationToken.setMember(member);
+        verificationToken.setTokenHash(TokenHasher.sha256Hex(verifyPlaintext));
+        verificationToken.setExpiresAt(Instant.now().plus(24, ChronoUnit.HOURS));
+        emailVerificationTokenRepository.save(verificationToken);
+
+        String emailToSend = member.getEmail();
+        String tokenToSend = verifyPlaintext;
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                emailSender.sendEmailVerificationAsync(emailToSend, tokenToSend);
+            }
+        });
 
         TenantContext.setTenantId(business.getId());
         try {
@@ -156,6 +187,69 @@ public class AuthServiceImpl implements AuthService {
                 business.getName(),
                 member.isEmailVerified()
         );
+    }
+
+    @Override
+    @Transactional
+    public void forgotPassword(ForgotPasswordRequest request) {
+        memberRepository.findByEmail(request.email()).ifPresent(member -> {
+            byte[] randomBytes = new byte[32];
+            new SecureRandom().nextBytes(randomBytes);
+            String plaintext = Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+
+            passwordResetTokenRepository.invalidateAllActiveByMemberId(member.getId(), Instant.now());
+
+            PasswordResetToken token = new PasswordResetToken();
+            token.setMember(member);
+            token.setTokenHash(TokenHasher.sha256Hex(plaintext));
+            token.setExpiresAt(Instant.now().plus(1, ChronoUnit.HOURS));
+            passwordResetTokenRepository.save(token);
+
+            String emailToSend = member.getEmail();
+            String tokenToSend = plaintext;
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    emailSender.sendPasswordResetAsync(emailToSend, tokenToSend);
+                }
+            });
+        });
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        String hash = TokenHasher.sha256Hex(request.token());
+        PasswordResetToken token = passwordResetTokenRepository
+                .findActiveByTokenHash(hash, Instant.now())
+                .orElseThrow(() -> new InvalidResetTokenException("Reset token is invalid or expired"));
+
+        Member member = token.getMember();
+        member.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        memberRepository.save(member);
+
+        token.setUsedAt(Instant.now());
+        passwordResetTokenRepository.save(token);
+        passwordResetTokenRepository.invalidateAllActiveByMemberId(member.getId(), Instant.now());
+
+        jwtService.revokeAllRefreshTokens(member.getId());
+    }
+
+    @Override
+    @Transactional
+    public void verifyEmail(VerifyEmailRequest request) {
+        String hash = TokenHasher.sha256Hex(request.token());
+        EmailVerificationToken token = emailVerificationTokenRepository
+                .findActiveByTokenHash(hash, Instant.now())
+                .orElseThrow(() -> new InvalidVerificationTokenException("Verification token is invalid or expired"));
+
+        Member member = token.getMember();
+        member.setEmailVerified(true);
+        memberRepository.save(member);
+
+        token.setUsedAt(Instant.now());
+        emailVerificationTokenRepository.save(token);
+        emailVerificationTokenRepository.invalidateAllActiveByMemberId(member.getId(), Instant.now());
     }
 
     private String slugify(String input) {
