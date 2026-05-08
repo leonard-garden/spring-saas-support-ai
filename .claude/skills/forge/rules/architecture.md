@@ -1,7 +1,7 @@
 # Architecture Rules
 
-Checklist cho Phase 5 Static Verification. Chạy từng rule bằng Grep/AST/LSP.
-FAIL bất kỳ rule nào → fix trước khi commit.
+Checklist for Step 5 Static Verification. Run each rule with Grep/AST/LSP.
+FAIL on any rule → fix before committing.
 
 ---
 
@@ -110,3 +110,111 @@ grep -rn "import.*Repository" src/main/java --include="*.java" \
 ```
 
 Controller chỉ được import Service interface.
+
+---
+
+## Rule 8 — @Async methods that write to DB must use @Transactional(REQUIRES_NEW)
+
+`@Async` runs on a separate thread — no transaction from the caller propagates.
+Without an explicit `@Transactional`, JPA uses auto-commit (implicit, no rollback on failure).
+
+```bash
+grep -rn "@Async" src/main/java --include="*.java" | grep -v "taskExecutor"
+# non-empty = FAIL (bare @Async)
+```
+
+Every `@Async` method that does a DB write MUST declare:
+
+```java
+@Async("taskExecutor")
+@Transactional(propagation = Propagation.REQUIRES_NEW)
+public void someAsyncWriteMethod(...) { ... }
+```
+
+`REQUIRES_NEW` makes intent explicit: always own transaction, independent of caller.
+
+---
+
+## Rule 9 — @Async methods must live in a separate @Service bean
+
+Spring `@Async` works through the AOP proxy. Calling an `@Async` method from within the **same class** bypasses the proxy — the method runs synchronously on the caller's thread.
+
+```bash
+# Manually verify: every @Async method must be in a class that is
+# injected as a dependency by the caller, not called via this.*
+grep -rn "@Async" src/main/java --include="*.java" -l
+# For each file: confirm the caller injects this bean — it does NOT call self
+```
+
+❌ FAIL — self-invocation, proxy bypassed:
+```java
+@Service
+public class AuthServiceImpl {
+    @Async("taskExecutor")
+    public void logAsync() { ... }
+
+    public void login() {
+        logAsync(); // runs synchronously — @Async is a no-op
+    }
+}
+```
+
+✅ PASS — separate bean:
+```java
+@Service
+public class AuditLogger {
+    @Async("taskExecutor")
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void logAsync() { ... }
+}
+
+@Service
+public class AuthServiceImpl {
+    private final AuditLogger auditLogger; // injected
+    public void login() {
+        auditLogger.logAsync(); // goes through proxy — truly async
+    }
+}
+```
+
+---
+
+## Rule 10 — Never throw EntityNotFoundException or raw RuntimeException from service layer
+
+All errors thrown from service layer must extend `AppException` to get proper `ProblemDetail` mapping.
+`EntityNotFoundException` (JPA) leaks ORM semantics into the HTTP response.
+
+```bash
+grep -rn "throw new EntityNotFoundException\|throw new RuntimeException" \
+  src/main/java --include="*.java" | grep -v "Test"
+# non-empty = FAIL
+```
+
+❌ FAIL:
+```java
+.orElseThrow(() -> new EntityNotFoundException("Plan not found"))
+```
+
+✅ PASS:
+```java
+.orElseThrow(() -> new PlanMisconfiguredException("free"))
+```
+
+---
+
+## Rule 11 — SecurityConfig must declare a custom AuthenticationEntryPoint when using JWT
+
+Spring Security's default `AuthenticationEntryPoint` sends `WWW-Authenticate: Basic realm=...` on 401.
+This causes JDK `HttpURLConnection` (TestRestTemplate default) to retry POST requests in streaming mode,
+throwing `HttpRetryException: cannot retry due to server authentication, in streaming mode`.
+
+Any `SecurityConfig` wiring a JWT filter MUST include:
+
+```java
+.exceptionHandling(ex -> ex.authenticationEntryPoint(
+    (request, response, e) -> {
+        response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.getWriter().write("{\"status\":401,\"title\":\"Unauthorized\",\"detail\":\"Authentication required\"}");
+    }
+))

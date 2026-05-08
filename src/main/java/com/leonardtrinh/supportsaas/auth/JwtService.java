@@ -17,4 +17,6 @@ public interface JwtService {
     String rotateRefreshToken(String oldToken, Member member);
 
     void revokeAllRefreshTokens(UUID memberId);
+
+    void revokeRefreshToken(String rawToken);
 }

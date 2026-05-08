@@ -33,7 +33,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 JwtClaims claims = jwtService.validateAccessToken(token);
                 TenantContext.setTenantId(claims.tenantId());
                 var auth = new UsernamePasswordAuthenticationToken(
-                    claims.memberId(),
+                    claims,
                     null,
                     List.of(new SimpleGrantedAuthority("ROLE_" + claims.role()))
                 );

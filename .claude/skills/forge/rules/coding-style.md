@@ -1,6 +1,8 @@
 # Coding Style Rules
 
-Java 21 idioms của project này. Load khi: executor cần context, hoặc Phase 5 static check.
+Java 21 idioms for this project. Load when: executor needs context, or Step 5 static check.
+
+> All files, comments, and documentation in this project must be written in **English**.
 
 ---
 
@@ -107,10 +109,59 @@ public void setBusinessId(UUID businessId) {
 
 ---
 
-## Không dùng Optional.get() trực tiếp
+## Do not call Optional.get() directly
 
 ```bash
 grep -rn "\.get()" src/main/java --include="*.java" \
   | grep "Optional\|optional"
-# Kết quả = FAIL — dùng orElseThrow() thay thế
+# non-empty = FAIL — use orElseThrow() instead
+```
+
+---
+
+## Prefer JPA repository over raw JdbcTemplate
+
+Use `JpaRepository` (entity + repository) for all DB operations.
+Only use `JdbcTemplate` when Hibernate cannot express the query (e.g. bulk native updates, DDL).
+
+```bash
+grep -rn "JdbcTemplate" src/main/java --include="*.java" | grep -v "Test\|Config"
+# Review each: is there a JPA equivalent available?
+```
+
+❌ FAIL — raw JDBC when a JPA entity exists:
+```java
+jdbcTemplate.update("INSERT INTO audit_logs ...", UUID.randomUUID(), businessId, ...);
+```
+
+✅ PASS — JPA entity + repository:
+```java
+AuditLog entry = new AuditLog();
+entry.setBusinessId(businessId);
+entry.setAction("LOGIN");
+auditLogRepository.save(entry);
+```
+
+---
+
+## Integration tests: use Apache HttpClient, not JDK HttpURLConnection
+
+JDK `HttpURLConnection` (TestRestTemplate default) throws `HttpRetryException` when a POST request
+returns 401, because it tries to retry in streaming mode. Switch to Apache HttpClient:
+
+Add to `pom.xml` (test scope):
+```xml
+<dependency>
+    <groupId>org.apache.httpcomponents.client5</groupId>
+    <artifactId>httpclient5</artifactId>
+    <scope>test</scope>
+</dependency>
+```
+
+Configure in `@BeforeEach` of every `*IT` class that tests error responses on POST:
+```java
+@BeforeEach
+void configureHttpClient() {
+    restTemplate.getRestTemplate().setRequestFactory(new HttpComponentsClientHttpRequestFactory());
+}
 ```
