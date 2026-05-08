@@ -13,6 +13,19 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
+  mail:
+    host: localhost
+    port: 1025
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
+app:
+  base-url: http://localhost:3000
+
 logging:
   level:
     com.leonardtrinh.supportsaas: DEBUG

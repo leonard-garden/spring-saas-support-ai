@@ -11,4 +11,10 @@ public interface AuthService {
     void logout(String refreshToken);
 
     MeResponse me(JwtClaims claims);
+
+    void forgotPassword(ForgotPasswordRequest request);
+
+    void resetPassword(ResetPasswordRequest request);
+
+    void verifyEmail(VerifyEmailRequest request);
 }
