@@ -1,0 +1,10 @@
+<type>(<scope>): <subject — imperative, max 72 chars>
+
+<body — WHY this change, not WHAT. Explain the decision, constraint, or tradeoff.
+What problem does this solve? What would break without it?>
+
+Constraint: <active constraint that shaped this decision — e.g., "Virtual threads disabled — ThreadLocal-based TenantContext requires classic thread-per-request model">
+Rejected:   <alternative considered> | <reason it was rejected>
+Confidence: <high | medium | low>
+Scope-risk: <narrow | moderate | broad>
+Not-tested: <edge case or scenario not covered by tests>
