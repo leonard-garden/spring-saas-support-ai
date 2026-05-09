@@ -60,7 +60,7 @@ class FlywayMigrationIT {
     @Test
     void invitationsTableHasRequiredColumns() {
         assertColumnsExist("invitations", List.of(
-                "id", "business_id", "email", "role", "token", "expires_at", "accepted_at"
+                "id", "business_id", "email", "role", "token_hash", "expires_at", "accepted_at"
         ));
     }
 

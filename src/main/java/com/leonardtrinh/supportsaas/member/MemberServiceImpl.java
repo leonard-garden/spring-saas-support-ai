@@ -2,6 +2,7 @@ package com.leonardtrinh.supportsaas.member;
 
 import com.leonardtrinh.supportsaas.auth.JwtClaims;
 import com.leonardtrinh.supportsaas.auth.JwtService;
+import com.leonardtrinh.supportsaas.tenant.TenantContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,7 +30,9 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     public MemberResponse getById(UUID id) {
+        // em.find() bypasses Hibernate filters — explicit tenant check required
         Member member = memberRepository.findById(id)
+                .filter(m -> m.getBusinessId().equals(TenantContext.getTenantId()))
                 .orElseThrow(() -> new MemberNotFoundException(id));
         return toResponse(member);
     }
@@ -40,13 +43,14 @@ public class MemberServiceImpl implements MemberService {
         if (targetMemberId.equals(caller.memberId())) {
             throw new SelfModificationException("delete");
         }
-        // Verify member exists in this tenant (Hibernate filter scopes by tenant — cross-tenant IDs return empty)
-        memberRepository.findById(targetMemberId)
+        // em.find() bypasses Hibernate filters — explicit tenant check required
+        Member member = memberRepository.findById(targetMemberId)
+                .filter(m -> m.getBusinessId().equals(TenantContext.getTenantId()))
                 .orElseThrow(() -> new MemberNotFoundException(targetMemberId));
 
-        // revokeAllRefreshTokens uses a raw UPDATE by member_id; tenant safety guaranteed by the
-        // findById check above which already confirmed the member belongs to the caller's tenant.
-        jwtService.revokeAllRefreshTokens(targetMemberId);
+        // revokeAllRefreshTokens uses a raw UPDATE by member_id; tenant safety guaranteed by
+        // the businessId check above confirming the member belongs to the caller's tenant.
+        jwtService.revokeAllRefreshTokens(member.getId());
         memberRepository.deleteById(targetMemberId);
     }
 
@@ -59,7 +63,9 @@ public class MemberServiceImpl implements MemberService {
         if (request.role() == Role.OWNER) {
             throw new InvalidRolePromotionException();
         }
+        // em.find() bypasses Hibernate filters — explicit tenant check required
         Member member = memberRepository.findById(targetMemberId)
+                .filter(m -> m.getBusinessId().equals(TenantContext.getTenantId()))
                 .orElseThrow(() -> new MemberNotFoundException(targetMemberId));
         member.setRole(request.role());
         Member saved = memberRepository.save(member);
