@@ -1,6 +1,7 @@
 package com.leonardtrinh.supportsaas.auth;
 
 import com.leonardtrinh.supportsaas.member.Member;
+import com.leonardtrinh.supportsaas.member.MemberRepository;
 import com.leonardtrinh.supportsaas.member.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -30,13 +31,16 @@ class JwtServiceImplTest {
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
 
+    @Mock
+    private MemberRepository memberRepository;
+
     private JwtServiceImpl jwtService;
     private Member member;
 
     @BeforeEach
     void setUp() {
         JwtProperties properties = new JwtProperties(TEST_SECRET, 900_000L, 604_800_000L);
-        jwtService = new JwtServiceImpl(properties, refreshTokenRepository);
+        jwtService = new JwtServiceImpl(properties, refreshTokenRepository, memberRepository);
 
         member = new Member();
         member.setId(UUID.randomUUID());
@@ -62,7 +66,7 @@ class JwtServiceImplTest {
     @DisplayName("validateAccessToken throws ExpiredTokenException for expired token")
     void validateAccessToken_expiredToken_throwsExpiredTokenException() {
         JwtProperties shortExpiry = new JwtProperties(TEST_SECRET, -1L, 604_800_000L);
-        JwtServiceImpl shortService = new JwtServiceImpl(shortExpiry, refreshTokenRepository);
+        JwtServiceImpl shortService = new JwtServiceImpl(shortExpiry, refreshTokenRepository, memberRepository);
 
         String token = shortService.generateAccessToken(member);
 
@@ -142,7 +146,7 @@ class JwtServiceImplTest {
         String shortSecret = Base64.getEncoder().encodeToString("short".getBytes());
         JwtProperties bad = new JwtProperties(shortSecret, 900_000L, 604_800_000L);
 
-        assertThatThrownBy(() -> new JwtServiceImpl(bad, refreshTokenRepository))
+        assertThatThrownBy(() -> new JwtServiceImpl(bad, refreshTokenRepository, memberRepository))
             .isInstanceOf(IllegalStateException.class)
             .hasMessageContaining("256 bits");
     }

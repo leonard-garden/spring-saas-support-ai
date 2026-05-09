@@ -1,6 +1,7 @@
 package com.leonardtrinh.supportsaas.auth;
 
 import com.leonardtrinh.supportsaas.member.Member;
+import com.leonardtrinh.supportsaas.member.MemberRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -21,11 +22,14 @@ public class JwtServiceImpl implements JwtService {
 
     private final JwtProperties properties;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final MemberRepository memberRepository;
     private final SecretKey signingKey;
 
-    public JwtServiceImpl(JwtProperties properties, RefreshTokenRepository refreshTokenRepository) {
+    public JwtServiceImpl(JwtProperties properties, RefreshTokenRepository refreshTokenRepository,
+                          MemberRepository memberRepository) {
         this.properties = properties;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.memberRepository = memberRepository;
         byte[] keyBytes = Base64.getDecoder().decode(properties.secret());
         if (keyBytes.length < 32) {
             throw new IllegalStateException(
@@ -57,7 +61,7 @@ public class JwtServiceImpl implements JwtService {
         String plaintext = Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
 
         RefreshToken token = new RefreshToken();
-        token.setMember(member);
+        token.setMemberId(member.getId());
         token.setTokenHash(sha256Hex(plaintext));
         token.setExpiresAt(Instant.now().plusMillis(properties.refreshTokenExpirationMs()));
         refreshTokenRepository.save(token);
@@ -90,8 +94,9 @@ public class JwtServiceImpl implements JwtService {
     @Override
     public Member validateRefreshToken(String token) {
         String hash = sha256Hex(token);
-        return refreshTokenRepository.findActiveByTokenHash(hash, Instant.now())
-            .map(RefreshToken::getMember)
+        RefreshToken refreshToken = refreshTokenRepository.findActiveByTokenHash(hash, Instant.now())
+            .orElseThrow(() -> new InvalidTokenException("Refresh token is invalid or expired"));
+        return memberRepository.findById(refreshToken.getMemberId())
             .orElseThrow(() -> new InvalidTokenException("Refresh token is invalid or expired"));
     }
 
