@@ -144,6 +144,36 @@ auditLogRepository.save(entry);
 
 ---
 
+## Token/lookup tables: use plain UUID FK, not @ManyToOne
+
+Token tables (password_reset_tokens, email_verification_tokens, refresh_tokens) are **lookup tables**
+— you look up by hash, get a member_id, then load the member separately.
+Using `@ManyToOne` on these entities creates a hidden N+1 risk: any future list query that accesses
+`token.getMember()` without `JOIN FETCH` silently fires N extra queries.
+
+✅ PASS — plain FK, no lazy association:
+```java
+@Column(name = "member_id", nullable = false, updatable = false)
+private UUID memberId;
+```
+
+❌ FAIL — @ManyToOne on a lookup/token entity:
+```java
+@ManyToOne(fetch = FetchType.LAZY)
+@JoinColumn(name = "member_id", nullable = false)
+private Member member;
+```
+
+When you need the member after finding a token, load it explicitly:
+```java
+Member member = memberRepository.findById(token.getMemberId())
+    .orElseThrow(() -> new InvalidResetTokenException("Member not found"));
+```
+
+This also removes the need for `JOIN FETCH` in the repository query — the query stays simple.
+
+---
+
 ## Async wrapper beans must have an interface
 
 Any `@Service` bean that exists solely to add `@Async` behavior around another service MUST declare an interface.

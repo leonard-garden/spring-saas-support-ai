@@ -100,7 +100,7 @@ public class AuthServiceImpl implements AuthService {
         new SecureRandom().nextBytes(verifyBytes);
         String verifyPlaintext = Base64.getUrlEncoder().withoutPadding().encodeToString(verifyBytes);
         EmailVerificationToken verificationToken = new EmailVerificationToken();
-        verificationToken.setMember(member);
+        verificationToken.setMemberId(member.getId());
         verificationToken.setTokenHash(TokenHasher.sha256Hex(verifyPlaintext));
         verificationToken.setExpiresAt(Instant.now().plus(24, ChronoUnit.HOURS));
         emailVerificationTokenRepository.save(verificationToken);
@@ -201,7 +201,7 @@ public class AuthServiceImpl implements AuthService {
             passwordResetTokenRepository.invalidateAllActiveByMemberId(member.getId(), Instant.now());
 
             PasswordResetToken token = new PasswordResetToken();
-            token.setMember(member);
+            token.setMemberId(member.getId());
             token.setTokenHash(TokenHasher.sha256Hex(plaintext));
             token.setExpiresAt(Instant.now().plus(1, ChronoUnit.HOURS));
             passwordResetTokenRepository.save(token);
@@ -225,7 +225,8 @@ public class AuthServiceImpl implements AuthService {
                 .findActiveByTokenHash(hash, Instant.now())
                 .orElseThrow(() -> new InvalidResetTokenException("Reset token is invalid or expired"));
 
-        Member member = token.getMember();
+        Member member = memberRepository.findById(token.getMemberId())
+                .orElseThrow(() -> new InvalidResetTokenException("Member not found for reset token"));
         member.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         memberRepository.save(member);
 
@@ -244,7 +245,8 @@ public class AuthServiceImpl implements AuthService {
                 .findActiveByTokenHash(hash, Instant.now())
                 .orElseThrow(() -> new InvalidVerificationTokenException("Verification token is invalid or expired"));
 
-        Member member = token.getMember();
+        Member member = memberRepository.findById(token.getMemberId())
+                .orElseThrow(() -> new InvalidVerificationTokenException("Member not found for verification token"));
         member.setEmailVerified(true);
         memberRepository.save(member);
 

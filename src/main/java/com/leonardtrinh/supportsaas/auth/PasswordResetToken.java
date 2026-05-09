@@ -1,6 +1,5 @@
 package com.leonardtrinh.supportsaas.auth;
 
-import com.leonardtrinh.supportsaas.member.Member;
 import jakarta.persistence.*;
 
 import java.time.Instant;
@@ -14,9 +13,8 @@ public class PasswordResetToken {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id", nullable = false)
-    private Member member;
+    @Column(name = "member_id", nullable = false, updatable = false)
+    private UUID memberId;
 
     @Column(name = "token_hash", nullable = false, unique = true)
     private String tokenHash;
@@ -31,13 +29,13 @@ public class PasswordResetToken {
     private Instant createdAt = Instant.now();
 
     public UUID getId() { return id; }
-    public Member getMember() { return member; }
+    public UUID getMemberId() { return memberId; }
     public String getTokenHash() { return tokenHash; }
     public Instant getExpiresAt() { return expiresAt; }
     public Instant getUsedAt() { return usedAt; }
     public Instant getCreatedAt() { return createdAt; }
 
-    public void setMember(Member member) { this.member = member; }
+    public void setMemberId(UUID memberId) { this.memberId = memberId; }
     public void setTokenHash(String tokenHash) { this.tokenHash = tokenHash; }
     public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
     public void setUsedAt(Instant usedAt) { this.usedAt = usedAt; }
