@@ -16,4 +16,12 @@ public interface MemberRepository extends JpaRepository<Member, UUID> {
 
     @Query(value = "SELECT COUNT(*) > 0 FROM members WHERE email = :email", nativeQuery = true)
     boolean existsByEmail(@Param("email") String email);
+
+    // Count members in a specific tenant (native — used when TenantContext may not be set)
+    @Query(value = "SELECT COUNT(*) FROM members WHERE business_id = :businessId", nativeQuery = true)
+    long countByBusinessId(@Param("businessId") UUID businessId);
+
+    // Check if email already a member in this tenant (native)
+    @Query(value = "SELECT COUNT(*) > 0 FROM members WHERE business_id = :businessId AND email = :email", nativeQuery = true)
+    boolean existsByEmailInTenant(@Param("businessId") UUID businessId, @Param("email") String email);
 }

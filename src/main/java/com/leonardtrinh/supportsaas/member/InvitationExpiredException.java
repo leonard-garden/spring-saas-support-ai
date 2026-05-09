@@ -6,6 +6,6 @@ import org.springframework.http.HttpStatus;
 public class InvitationExpiredException extends AppException {
 
     public InvitationExpiredException(String token) {
-        super(HttpStatus.GONE, "MEMBER_INVITATION_EXPIRED", "Invitation has expired or already used: token=" + token);
+        super(HttpStatus.BAD_REQUEST, "MEMBER_INVITATION_EXPIRED", "Invitation has expired or already used: token=" + token);
     }
 }
