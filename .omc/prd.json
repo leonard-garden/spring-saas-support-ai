@@ -1,0 +1,87 @@
+{
+  "task": "Phân tích thiết kế hệ thống spring-saas-support-ai dựa trên PROJECT_SPEC.md",
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Phân tích kiến trúc tổng thể & multi-tenancy",
+      "acceptanceCriteria": [
+        "Xác định điểm mạnh và rủi ro của chiến lược row-level isolation",
+        "Đánh giá TenantContext ThreadLocal và nguy cơ context leak",
+        "Đánh giá TenantContextCopyingDecorator cho async threads",
+        "Đưa ra khuyến nghị cụ thể về cải tiến multi-tenancy"
+      ],
+      "passes": true
+    },
+    {
+      "id": "US-002",
+      "title": "Phân tích Domain Model & quan hệ entities",
+      "acceptanceCriteria": [
+        "Xác định potential N+1 query problems",
+        "Đánh giá Chunk entity với vector embedding và index strategy",
+        "Đánh giá cascade delete strategy",
+        "Nhận xét về UsageRecord race conditions",
+        "Đưa ra khuyến nghị về indexing strategy"
+      ],
+      "passes": true
+    },
+    {
+      "id": "US-003",
+      "title": "Phân tích API Design",
+      "acceptanceCriteria": [
+        "Đánh giá JWT refresh token flow",
+        "Nhận xét về public chat API security",
+        "Đánh giá SSE streaming endpoint design",
+        "Xác định missing endpoints hoặc design gaps",
+        "Nhận xét về rate limiting strategy"
+      ],
+      "passes": true
+    },
+    {
+      "id": "US-004",
+      "title": "Phân tích Tech Stack & dependency decisions",
+      "acceptanceCriteria": [
+        "Đánh giá Spring AI 1.1+ maturity",
+        "Nhận xét về PgVector trade-offs",
+        "Đánh giá Render/Railway free tier constraints",
+        "Nhận xét về @Async document processing persistence"
+      ],
+      "passes": true
+    },
+    {
+      "id": "US-005",
+      "title": "Phân tích RAG Pipeline & AI integration",
+      "acceptanceCriteria": [
+        "Đánh giá hybrid search design",
+        "Nhận xét về chunking strategy cho structured content",
+        "Đánh giá token budget management",
+        "Nhận xét về document processing retry strategy",
+        "Đánh giá cost tracking design"
+      ],
+      "passes": true
+    },
+    {
+      "id": "US-006",
+      "title": "Phân tích Security & Billing design",
+      "acceptanceCriteria": [
+        "Đánh giá JWT security (HS256 vs RS256 vs ApiKey)",
+        "Nhận xét về Stripe webhook idempotency",
+        "Đánh giá quota enforcement race conditions",
+        "Nhận xét về plan downgrade behavior",
+        "Đánh giá rate limiting distributed strategy"
+      ],
+      "passes": true
+    },
+    {
+      "id": "US-007",
+      "title": "Tổng hợp & khuyến nghị",
+      "acceptanceCriteria": [
+        "Liệt kê top 5 điểm mạnh của thiết kế",
+        "Liệt kê top 5 rủi ro/điểm cần cải thiện",
+        "Đưa ra khuyến nghị ưu tiên theo milestone",
+        "Đánh giá tính khả thi của 4-milestone roadmap (28 ngày)",
+        "Output một tài liệu phân tích hoàn chỉnh tại docs/SYSTEM_DESIGN_ANALYSIS.md"
+      ],
+      "passes": true
+    }
+  ]
+}

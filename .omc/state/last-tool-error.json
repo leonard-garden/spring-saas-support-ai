@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"git merge origin/main --no-edit 2>&1\",\"description\":\"Merge remote main into local main\"}",
+  "error": "Exit code 1\nCONFLICT (modify/delete): .claude/skills/forge/rules/coding-style.md deleted in origin/main and modified in HEAD.  Version HEAD of .claude/skills/forge/rules/coding-style.md left in tree.\nCONFLICT (modify/delete): pom.xml deleted in origin/main and modified in HEAD.  Version HEAD of pom.xml left in tree.\nCONFLICT (modify/delete): src/main/java/com/leonardtrinh/supportsaas/auth/AuthController.java deleted in origin/main and modified in HEAD.  Version HEAD of src/main/java/com/leonardt...",
+  "timestamp": "2026-05-10T12:24:39.269Z",
+  "retry_count": 5
+}
