@@ -92,7 +92,7 @@ public class InvitationServiceImpl implements InvitationService {
         Plan plan = resolveActivePlan(tenantId);
         long memberCount = memberRepository.countByBusinessId(tenantId);
         if (plan.getMaxMembers() > 0 && memberCount >= plan.getMaxMembers()) {
-            throw new QuotaExceededException("members", plan.getMaxMembers());
+            throw new QuotaExceededException("members", plan.getMaxMembers(), memberCount);
         }
 
         // Generate token
@@ -145,7 +145,7 @@ public class InvitationServiceImpl implements InvitationService {
             Plan plan = resolveActivePlan(businessId);
             long memberCount = memberRepository.countByBusinessId(businessId);
             if (plan.getMaxMembers() > 0 && memberCount >= plan.getMaxMembers()) {
-                throw new QuotaExceededException("members", plan.getMaxMembers());
+                throw new QuotaExceededException("members", plan.getMaxMembers(), memberCount);
             }
 
             // Create member

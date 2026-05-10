@@ -2,6 +2,10 @@ package com.leonardtrinh.supportsaas.member;
 
 import com.leonardtrinh.supportsaas.auth.JwtClaims;
 import com.leonardtrinh.supportsaas.common.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
@@ -15,6 +19,8 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/members")
+@Tag(name = "Members", description = "Member management — list, remove, and change roles")
+@SecurityRequirement(name = "Bearer")
 public class MemberController {
 
     private final MemberService memberService;
@@ -24,12 +30,25 @@ public class MemberController {
     }
 
     @GetMapping
+    @Operation(summary = "List all members in the tenant")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Member list returned"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Not authenticated"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient role")
+    })
     public ApiResponse<List<MemberResponse>> listAll() {
         requireAdminOrOwner();
         return ApiResponse.ok(memberService.listAll());
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Get member by ID")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Member found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Not authenticated"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient role"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Member not found")
+    })
     public ApiResponse<MemberResponse> getById(@PathVariable UUID id) {
         requireAdminOrOwner();
         return ApiResponse.ok(memberService.getById(id));
@@ -37,6 +56,13 @@ public class MemberController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Remove a member from the tenant")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "Member removed"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Not authenticated"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient role"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Member not found")
+    })
     public void delete(@PathVariable UUID id) {
         JwtClaims caller = caller();
         requireOwner(caller);
@@ -44,6 +70,14 @@ public class MemberController {
     }
 
     @PatchMapping("/{id}/role")
+    @Operation(summary = "Change a member's role")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Role updated"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation error"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Not authenticated"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient role"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Member not found")
+    })
     public ApiResponse<MemberResponse> changeRole(@PathVariable UUID id,
                                                    @Valid @RequestBody UpdateRoleRequest request) {
         JwtClaims caller = caller();

@@ -5,8 +5,19 @@ import org.springframework.http.HttpStatus;
 
 public class QuotaExceededException extends AppException {
 
-    public QuotaExceededException(String resource, long limit) {
+    private final String metric;
+    private final long limit;
+    private final long current;
+
+    public QuotaExceededException(String metric, long limit, long current) {
         super(HttpStatus.FORBIDDEN, "BILLING_QUOTA_EXCEEDED",
-                "Quota exceeded for " + resource + ": limit=" + limit + ". Please upgrade your plan.");
+                "You have reached the limit of " + limit + " " + metric + " for your plan.");
+        this.metric = metric;
+        this.limit = limit;
+        this.current = current;
     }
+
+    public String getMetric() { return metric; }
+    public long getLimit() { return limit; }
+    public long getCurrent() { return current; }
 }
