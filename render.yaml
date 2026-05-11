@@ -1,8 +1,3 @@
-databases:
-  - name: spring-saas-support-ai-db
-    plan: free
-    ipAllowList: []
-
 services:
   - type: web
     name: spring-saas-support-ai
@@ -16,23 +11,9 @@ services:
         sync: false
       - key: APP_BASE_URL
         sync: false
-      - key: DB_HOST
-        fromDatabase:
-          name: spring-saas-support-ai-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: spring-saas-support-ai-db
-          property: port
-      - key: DB_NAME
-        fromDatabase:
-          name: spring-saas-support-ai-db
-          property: database
-      - key: DB_USER
-        fromDatabase:
-          name: spring-saas-support-ai-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: spring-saas-support-ai-db
-          property: password
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_USERNAME
+        sync: false
+      - key: DATABASE_PASSWORD
+        sync: false
