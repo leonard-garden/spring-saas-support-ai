@@ -1,0 +1,9 @@
+/Users/leonard/Workspace/leonard-garden/spring-saas-support-ai/src/test/java/com/leonardtrinh/supportsaas/auth/AuthEmailIT.java
+/Users/leonard/Workspace/leonard-garden/spring-saas-support-ai/src/test/java/com/leonardtrinh/supportsaas/auth/AuthIT.java
+/Users/leonard/Workspace/leonard-garden/spring-saas-support-ai/src/test/java/com/leonardtrinh/supportsaas/auth/JwtServiceImplTest.java
+/Users/leonard/Workspace/leonard-garden/spring-saas-support-ai/src/test/java/com/leonardtrinh/supportsaas/common/BaseIT.java
+/Users/leonard/Workspace/leonard-garden/spring-saas-support-ai/src/test/java/com/leonardtrinh/supportsaas/member/MemberManagementIT.java
+/Users/leonard/Workspace/leonard-garden/spring-saas-support-ai/src/test/java/com/leonardtrinh/supportsaas/migration/FlywayMigrationIT.java
+/Users/leonard/Workspace/leonard-garden/spring-saas-support-ai/src/test/java/com/leonardtrinh/supportsaas/tenant/TenantContextCopyingDecoratorTest.java
+/Users/leonard/Workspace/leonard-garden/spring-saas-support-ai/src/test/java/com/leonardtrinh/supportsaas/tenant/TenantContextTest.java
+/Users/leonard/Workspace/leonard-garden/spring-saas-support-ai/src/test/java/com/leonardtrinh/supportsaas/tenant/TenantIsolationIT.java
