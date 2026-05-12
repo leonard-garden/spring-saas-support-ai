@@ -17,3 +17,9 @@ services:
         sync: false
       - key: DATABASE_PASSWORD
         sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_SENDER
+        sync: false
