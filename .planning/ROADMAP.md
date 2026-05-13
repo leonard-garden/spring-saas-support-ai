@@ -39,11 +39,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Depends on**: Nothing (first phase)
 **Requirements**: None directly — infrastructure prerequisite that unblocks all other phases
 **Success Criteria** (what must be TRUE):
-  1. `admin-ui/` directory exists at repo root with Vite + React 18 + TypeScript configured
+  1. `frontend/` directory exists at repo root with Vite + React 18 + TypeScript configured
   2. All stack libraries are installed (axios, react-router-dom, zustand, react-query, react-hook-form, zod, shadcn/ui)
   3. A manual `POST /api/v1/auth/login` call from the browser (or dev tools) returns 200 without CORS errors
   4. `npm run dev` starts without errors and renders the Vite default page or a placeholder
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
 - [ ] 01-01: Scaffold Vite project and install all stack dependencies
