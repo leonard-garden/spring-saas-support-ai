@@ -77,35 +77,35 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase TBD | Pending |
-| AUTH-02 | Phase TBD | Pending |
-| AUTH-03 | Phase TBD | Pending |
-| AUTH-04 | Phase TBD | Pending |
-| AUTH-05 | Phase TBD | Pending |
-| AUTH-06 | Phase TBD | Pending |
-| AUTH-07 | Phase TBD | Pending |
-| AUTH-08 | Phase TBD | Pending |
-| AUTH-09 | Phase TBD | Pending |
-| SHELL-01 | Phase TBD | Pending |
-| SHELL-02 | Phase TBD | Pending |
-| SHELL-03 | Phase TBD | Pending |
-| DASH-01 | Phase TBD | Pending |
-| DASH-02 | Phase TBD | Pending |
-| DASH-03 | Phase TBD | Pending |
-| MBR-01 | Phase TBD | Pending |
-| MBR-02 | Phase TBD | Pending |
-| MBR-03 | Phase TBD | Pending |
-| MBR-04 | Phase TBD | Pending |
-| MBR-05 | Phase TBD | Pending |
-| MBR-06 | Phase TBD | Pending |
-| KB-01 | Phase TBD | Pending |
-| KB-02 | Phase TBD | Pending |
+| AUTH-01 | Phase 3 | Pending |
+| AUTH-02 | Phase 3 | Pending |
+| AUTH-03 | Phase 2 | Pending |
+| AUTH-04 | Phase 2 | Pending |
+| AUTH-05 | Phase 2 | Pending |
+| AUTH-06 | Phase 3 | Pending |
+| AUTH-07 | Phase 3 | Pending |
+| AUTH-08 | Phase 3 | Pending |
+| AUTH-09 | Phase 3 | Pending |
+| SHELL-01 | Phase 4 | Pending |
+| SHELL-02 | Phase 4 | Pending |
+| SHELL-03 | Phase 4 | Pending |
+| DASH-01 | Phase 4 | Pending |
+| DASH-02 | Phase 4 | Pending |
+| DASH-03 | Phase 4 | Pending |
+| MBR-01 | Phase 5 | Pending |
+| MBR-02 | Phase 5 | Pending |
+| MBR-03 | Phase 5 | Pending |
+| MBR-04 | Phase 5 | Pending |
+| MBR-05 | Phase 5 | Pending |
+| MBR-06 | Phase 5 | Pending |
+| KB-01 | Phase 6 | Pending |
+| KB-02 | Phase 6 | Pending |
 
 **Coverage:**
 - v0.2 requirements: 23 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 23 ⚠️
+- Mapped to phases: 23
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-05-13*
-*Last updated: 2026-05-13 after initial definition*
+*Last updated: 2026-05-13 — traceability filled after roadmap creation*
