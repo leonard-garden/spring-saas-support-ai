@@ -27,11 +27,11 @@ Create the `frontend/` React project at repo root with all stack libraries insta
 
 ### Stack (locked from research)
 - **D-07:** Build: Vite 5.x + React 18 + TypeScript 5.x (strict mode)
-- **D-08:** Routing: react-router-dom 6.x
+- **D-08:** Routing: react-router-dom 7.x (v7 retains identical BrowserRouter+Routes API; current stable as of 2026-05-13)
 - **D-09:** Components: shadcn/ui (Radix + Tailwind) + lucide-react
 - **D-10:** Server state: @tanstack/react-query 5.x
 - **D-11:** HTTP client: axios 1.x
-- **D-12:** Auth state: zustand 4.x
+- **D-12:** Auth state: zustand 5.x (v5 is current stable; `create()` API fully backward-compatible with v4)
 - **D-13:** Forms: react-hook-form 7.x + zod 3.x + @hookform/resolvers 3.x
 - **D-14:** Styling: Tailwind CSS 3.x
 
