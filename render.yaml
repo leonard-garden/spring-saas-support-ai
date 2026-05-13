@@ -23,3 +23,5 @@ services:
         sync: false
       - key: MAIL_SENDER
         sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
