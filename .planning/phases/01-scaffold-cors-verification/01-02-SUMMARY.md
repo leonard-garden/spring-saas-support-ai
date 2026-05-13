@@ -13,6 +13,8 @@ provides:
   - "CorsTestPage: five-state CORS verification UI at /cors-test"
   - "App.tsx: BrowserRouter + QueryClientProvider + /cors-test route"
   - "main.tsx: clean React root mount (Vite scaffolding removed)"
+  - "CORS PASS confirmed: live cross-origin POST /auth/login from :5173 to :8081 — Phase 2 unblocked"
+  - "Evidence: .planning/phases/01-scaffold-cors-verification/evidence/cors-verification.md"
 
 affects: [02-auth-infrastructure, all-frontend-phases]
 
@@ -51,15 +53,15 @@ completed: "2026-05-13"
 
 # Phase 01 Plan 02: CORS Verification Frontend Summary
 
-**CorsTestPage with five-state CORS/API error discrimination wired into BrowserRouter + QueryClientProvider, build passing; awaiting live cross-origin POST verification against backend on :8081.**
+**CorsTestPage with five-state CORS/API error discrimination confirmed working — live cross-origin POST /auth/login from localhost:5173 to localhost:8081 returned green/amber (PASS), Phase 2 unblocked.**
 
 ## Performance
 
-- **Duration:** ~5 min (Task 1 complete; Task 2 awaiting human checkpoint)
+- **Duration:** ~25 min total (Task 1 ~5 min, Task 2 human verification)
 - **Started:** 2026-05-13T15:26:51Z
-- **Completed:** 2026-05-13T15:28:14Z (Task 1 only)
-- **Tasks:** 1/2 (Task 2 is checkpoint:human-verify — paused)
-- **Files modified:** 5 (3 created/overwritten + 2 deleted)
+- **Completed:** 2026-05-13
+- **Tasks:** 2/2
+- **Files modified:** 6 (3 created/overwritten + 2 deleted + 1 evidence file)
 
 ## Accomplishments
 
@@ -72,7 +74,7 @@ completed: "2026-05-13"
 ## Task Commits
 
 1. **Task 1: Build CorsTestPage, wire App.tsx router, clean main.tsx** - `e43c9a3` (feat)
-2. **Task 2: Live CORS verification** - PENDING (checkpoint:human-verify)
+2. **Task 2: Live CORS verification** - `b4c7c9f` (chore — evidence committed; PASS confirmed by human)
 
 ## Files Created/Modified
 
@@ -100,25 +102,20 @@ None — the page has a real axios call with real state branches. No hardcoded e
 
 None. Build passed on first attempt.
 
-## Checkpoint Awaiting
+## CORS Verification Result
 
-**Task 2: Live CORS verification against running backend**
+**Result: PASS** — Human confirmed green or amber response at `http://localhost:5173/cors-test` with no CORS errors in DevTools.
 
-This checkpoint requires the developer to:
-1. Start backend: `docker-compose up -d && mvn spring-boot:run -Dspring-boot.run.profiles=dev`
-2. Start frontend: `cd frontend && npm run dev`
-3. Open `http://localhost:5173/cors-test` in browser
-4. Submit form with any email/password
-5. Confirm GREEN (200) or AMBER (4xx) alert — both prove CORS works
-6. Save screenshot to `.planning/phases/01-scaffold-cors-verification/evidence/cors-pass.png`
-7. Reply "approved" to unblock Phase 2
+- Cross-origin POST to `http://localhost:8081/api/v1/auth/login` reached the backend (OPTIONS preflight returned 200 with `Access-Control-Allow-Origin: http://localhost:5173`)
+- Evidence recorded at `.planning/phases/01-scaffold-cors-verification/evidence/cors-verification.md`
 
 ## Next Phase Readiness
 
-- Phase 2 (Auth Infrastructure) is blocked until CORS verification passes (Task 2 checkpoint)
-- Once CORS is confirmed, Phase 2 can proceed immediately — no backend changes expected
-- Evidence directory created at `.planning/phases/01-scaffold-cors-verification/evidence/`
+- Phase 2 (Auth Infrastructure) is **unblocked**
+- Axios instance (`@/lib/api`) proven wired correctly with VITE_API_URL
+- BrowserRouter in App.tsx ready for ProtectedRoute and auth-aware routing additions
+- No backend CORS changes required before Phase 2
 
 ---
 *Phase: 01-scaffold-cors-verification*
-*Completed: 2026-05-13 (Task 1 only — Task 2 checkpoint pending)*
+*Completed: 2026-05-13*

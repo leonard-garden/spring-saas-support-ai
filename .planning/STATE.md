@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.2
 milestone_name: "— M1 Frontend: Admin Dashboard"
 status: unknown
-stopped_at: "Checkpoint 01-02 Task 2: Live CORS verification — awaiting human-verify"
-last_updated: "2026-05-13T15:29:04.642Z"
+stopped_at: Completed 01-scaffold-cors-verification 01-02-PLAN.md
+last_updated: "2026-05-13T15:53:05.906Z"
 progress:
   total_phases: 7
   completed_phases: 1
@@ -47,6 +47,7 @@ Plan: 2 of 2
 
 *Updated after each plan completion*
 | Phase 01-scaffold-cors-verification P01 | 358 | 2 tasks | 18 files |
+| Phase 01-scaffold-cors-verification P02 | 25 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -62,6 +63,7 @@ Plan: 2 of 2
 - [Phase 01-scaffold-cors-verification]: POST via @/lib/api (shared axios instance) not bare axios — proves VITE_API_URL wiring end-to-end
 - [Phase 01-scaffold-cors-verification]: 401 from server = AMBER (CORS proven) not failure — expected happy path with no valid credentials
 - [Phase 01-scaffold-cors-verification]: Wildcard * route redirects to /cors-test for Phase 1; Phase 2 will replace with proper auth guard
+- [Phase 01-scaffold-cors-verification]: CORS PASS confirmed: live cross-origin POST /auth/login from localhost:5173 to localhost:8081 — Phase 2 unblocked
 
 ### Pending Todos
 
@@ -76,6 +78,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-13T15:29:00.099Z
-Stopped at: Checkpoint 01-02 Task 2: Live CORS verification — awaiting human-verify
+Last session: 2026-05-13T15:53:05.904Z
+Stopped at: Completed 01-scaffold-cors-verification 01-02-PLAN.md
 Resume file: None
