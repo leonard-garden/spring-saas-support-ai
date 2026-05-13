@@ -24,7 +24,7 @@ Delivered before GSD was adopted. No phase tracking. See MILESTONES.md for full 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Scaffold + CORS Verification** - Vite project created, cross-origin API call confirmed working
+- [x] **Phase 1: Scaffold + CORS Verification** - Vite project created, cross-origin API call confirmed working (completed 2026-05-13)
 - [ ] **Phase 2: Auth Infrastructure** - Axios refresh-lock interceptor, Zustand tri-state store, ProtectedRoute guard
 - [ ] **Phase 3: Auth Pages** - Login, signup, logout, forgot/reset password, email verification banner
 - [ ] **Phase 4: App Shell + Dashboard Home** - Sidebar layout, user info, plan indicator, stat cards
@@ -43,11 +43,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. All stack libraries are installed (axios, react-router-dom, zustand, react-query, react-hook-form, zod, shadcn/ui)
   3. A manual `POST /api/v1/auth/login` call from the browser (or dev tools) returns 200 without CORS errors
   4. `npm run dev` starts without errors and renders the Vite default page or a placeholder
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 01-01: Scaffold Vite project and install all stack dependencies
-- [ ] 01-02: Verify CORS with a live cross-origin login probe
+- [x] 01-02: Verify CORS with a live cross-origin login probe
 
 ### Phase 2: Auth Infrastructure
 **Goal**: Users can navigate the app safely — protected routes block unauthenticated access, authenticated users are redirected away from auth pages, and the token refresh mechanism handles concurrent requests without race conditions
@@ -150,7 +150,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. Scaffold + CORS Verification | v0.2 | 1/2 | In Progress|  |
+| 1. Scaffold + CORS Verification | v0.2 | 2/2 | Complete   | 2026-05-13 |
 | 2. Auth Infrastructure | v0.2 | 0/2 | Not started | - |
 | 3. Auth Pages | v0.2 | 0/3 | Not started | - |
 | 4. App Shell + Dashboard Home | v0.2 | 0/2 | Not started | - |

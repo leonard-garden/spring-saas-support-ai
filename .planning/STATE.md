@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.2
 milestone_name: "— M1 Frontend: Admin Dashboard"
 status: unknown
-stopped_at: Completed 01-scaffold-cors-verification-01-01-PLAN.md
-last_updated: "2026-05-13T15:25:49.457Z"
+stopped_at: "Checkpoint 01-02 Task 2: Live CORS verification — awaiting human-verify"
+last_updated: "2026-05-13T15:29:04.642Z"
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -59,6 +59,9 @@ Plan: 2 of 2
 - [Phase 01-scaffold-cors-verification]: Used React 19 (Vite 9 scaffold default) instead of React 18 — fully backward-compatible, no downgrade needed
 - [Phase 01-scaffold-cors-verification]: shadcn@2.3.0 installed as devDependency (not npx) to bypass npx @ version hook restriction
 - [Phase 01-scaffold-cors-verification]: Added ignoreDeprecations: 6.0 to both tsconfig files for TypeScript 5.8 baseUrl compatibility
+- [Phase 01-scaffold-cors-verification]: POST via @/lib/api (shared axios instance) not bare axios — proves VITE_API_URL wiring end-to-end
+- [Phase 01-scaffold-cors-verification]: 401 from server = AMBER (CORS proven) not failure — expected happy path with no valid credentials
+- [Phase 01-scaffold-cors-verification]: Wildcard * route redirects to /cors-test for Phase 1; Phase 2 will replace with proper auth guard
 
 ### Pending Todos
 
@@ -73,6 +76,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-13T15:25:49.455Z
-Stopped at: Completed 01-scaffold-cors-verification-01-01-PLAN.md
+Last session: 2026-05-13T15:29:00.099Z
+Stopped at: Checkpoint 01-02 Task 2: Live CORS verification — awaiting human-verify
 Resume file: None
