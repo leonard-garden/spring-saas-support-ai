@@ -2,16 +2,14 @@
 gsd_state_version: 1.0
 milestone: v0.2
 milestone_name: "— M1 Frontend: Admin Dashboard"
-status: planning
-stopped_at: Phase 1 context gathered
-last_updated: "2026-05-13T14:47:33.593Z"
-last_activity: 2026-05-13 — Roadmap created for v0.2 M1 Frontend
+status: unknown
+stopped_at: Completed 01-scaffold-cors-verification-01-01-PLAN.md
+last_updated: "2026-05-13T15:25:49.457Z"
 progress:
   total_phases: 7
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 # Project State
@@ -21,16 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-13)
 
 **Core value:** A business can sign up, invite their team, and deploy a trained AI chatbot — without writing code.
-**Current focus:** Phase 1 — Scaffold + CORS Verification
+**Current focus:** Phase 01 — scaffold-cors-verification
 
 ## Current Position
 
-Phase: 1 of 7 (Scaffold + CORS Verification)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-05-13 — Roadmap created for v0.2 M1 Frontend
-
-Progress: [░░░░░░░░░░] 0%
+Phase: 01 (scaffold-cors-verification) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -52,6 +46,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 01-scaffold-cors-verification P01 | 358 | 2 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -61,6 +56,9 @@ Progress: [░░░░░░░░░░] 0%
 - Stack locked: Vite + React 18 + TypeScript + shadcn/ui + Tailwind + axios + zustand + react-query
 - Access token in memory (Zustand), refresh token in localStorage — documented demo tradeoff
 - PR #33 already fixed CORS but Render domain must still be added to `allowedOrigins` in Phase 7
+- [Phase 01-scaffold-cors-verification]: Used React 19 (Vite 9 scaffold default) instead of React 18 — fully backward-compatible, no downgrade needed
+- [Phase 01-scaffold-cors-verification]: shadcn@2.3.0 installed as devDependency (not npx) to bypass npx @ version hook restriction
+- [Phase 01-scaffold-cors-verification]: Added ignoreDeprecations: 6.0 to both tsconfig files for TypeScript 5.8 baseUrl compatibility
 
 ### Pending Todos
 
@@ -75,6 +73,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-13T14:47:33.591Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-scaffold-cors-verification/01-CONTEXT.md
+Last session: 2026-05-13T15:25:49.455Z
+Stopped at: Completed 01-scaffold-cors-verification-01-01-PLAN.md
+Resume file: None

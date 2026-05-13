@@ -43,10 +43,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. All stack libraries are installed (axios, react-router-dom, zustand, react-query, react-hook-form, zod, shadcn/ui)
   3. A manual `POST /api/v1/auth/login` call from the browser (or dev tools) returns 200 without CORS errors
   4. `npm run dev` starts without errors and renders the Vite default page or a placeholder
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
-- [ ] 01-01: Scaffold Vite project and install all stack dependencies
+- [x] 01-01: Scaffold Vite project and install all stack dependencies
 - [ ] 01-02: Verify CORS with a live cross-origin login probe
 
 ### Phase 2: Auth Infrastructure
@@ -150,7 +150,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. Scaffold + CORS Verification | v0.2 | 0/2 | Not started | - |
+| 1. Scaffold + CORS Verification | v0.2 | 1/2 | In Progress|  |
 | 2. Auth Infrastructure | v0.2 | 0/2 | Not started | - |
 | 3. Auth Pages | v0.2 | 0/3 | Not started | - |
 | 4. App Shell + Dashboard Home | v0.2 | 0/2 | Not started | - |
