@@ -14,17 +14,21 @@ public class SpringMailEmailService implements EmailService {
 
     private final JavaMailSender mailSender;
     private final String appBaseUrl;
+    private final String senderEmail;
 
     public SpringMailEmailService(
             JavaMailSender mailSender,
-            @Value("${app.base-url:http://localhost:3000}") String appBaseUrl) {
+            @Value("${app.base-url:http://localhost:3000}") String appBaseUrl,
+            @Value("${app.mail.sender:noreply@localhost}") String senderEmail) {
         this.mailSender = mailSender;
         this.appBaseUrl = appBaseUrl;
+        this.senderEmail = senderEmail;
     }
 
     @Override
     public void sendPasswordResetEmail(String toEmail, String resetToken) {
         SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(senderEmail);
         message.setTo(toEmail);
         message.setSubject("Reset your password");
         message.setText("Click the link below to reset your password:\n\n"
@@ -36,6 +40,7 @@ public class SpringMailEmailService implements EmailService {
     @Override
     public void sendEmailVerificationEmail(String toEmail, String verificationToken) {
         SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(senderEmail);
         message.setTo(toEmail);
         message.setSubject("Verify your email address");
         message.setText("Click the link below to verify your email address:\n\n"

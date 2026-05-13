@@ -9,6 +9,23 @@ spring:
       connection-timeout: 20000
   flyway:
     locations: classpath:db/migration
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+app:
+  base-url: ${APP_BASE_URL}
+  mail:
+    sender: ${MAIL_SENDER:${MAIL_USERNAME}}
 
 logging:
   level:
