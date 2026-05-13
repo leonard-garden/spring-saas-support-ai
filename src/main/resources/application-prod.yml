@@ -26,6 +26,8 @@ app:
   base-url: ${APP_BASE_URL}
   mail:
     sender: ${MAIL_SENDER:${MAIL_USERNAME}}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:${APP_BASE_URL}}
 
 logging:
   level:
