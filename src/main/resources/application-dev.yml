@@ -25,6 +25,8 @@ spring:
 
 app:
   base-url: http://localhost:3000
+  cors:
+    allowed-origins: http://localhost:3000,http://localhost:5173
 
 logging:
   level:
