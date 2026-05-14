@@ -30,6 +30,18 @@ export async function login(email: string, password: string): Promise<LoginResul
   return { token: auth.accessToken, user: meEnvelope.data! }
 }
 
+export async function logout(): Promise<void> {
+  await api.post("/auth/logout")
+}
+
+export async function forgotPassword(email: string): Promise<void> {
+  await api.post("/auth/forgot-password", { email })
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  await api.post("/auth/reset-password", { token, newPassword })
+}
+
 export async function signup(
   businessName: string,
   email: string,
