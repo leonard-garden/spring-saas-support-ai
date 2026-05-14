@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest"
+import { it, expect, beforeEach } from "vitest"
 import { useAuthStore, initialAuthState } from "./authStore"
 import { getAccessToken, clearTokens } from "@/lib/tokenStorage"
 import type { AuthUser } from "@/types/auth"
