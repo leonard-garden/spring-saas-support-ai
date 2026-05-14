@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest"
+import { it, expect, beforeEach } from "vitest"
 import axios from "axios"
 import MockAdapter from "axios-mock-adapter"
 import { api } from "./api"
