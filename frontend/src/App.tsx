@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { CorsTestPage } from "@/pages/CorsTestPage"
 import { LoginPage } from "@/pages/LoginPage"
+import { SignupPage } from "@/pages/SignupPage"
 import { DashboardPage } from "@/pages/DashboardPage"
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 import { GuestRoute } from "@/components/auth/GuestRoute"
@@ -17,6 +18,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/cors-test" element={<CorsTestPage />} />
       <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
+      <Route path="/signup" element={<GuestRoute><SignupPage /></GuestRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
