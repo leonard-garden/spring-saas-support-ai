@@ -74,7 +74,7 @@ Plans:
   3. User can log out and is returned to the login page with the session cleared server-side
   4. User can request a password reset email and follow the link to set a new password
   5. An unverified account sees a visible email verification banner on the dashboard
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
 - [ ] 03-01: Build Login and Signup pages with form validation

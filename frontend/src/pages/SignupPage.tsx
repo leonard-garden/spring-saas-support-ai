@@ -1,10 +1,9 @@
 import { useState } from "react"
-import { useNavigate, Link } from "react-router-dom"
+import { Link } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { login } from "@/lib/authApi"
-import { useAuthStore } from "@/store/authStore"
+import { signup } from "@/lib/authApi"
 import {
   Form,
   FormControl,
@@ -17,39 +16,51 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-const loginSchema = z.object({
+const signupSchema = z.object({
+  businessName: z.string().min(2),
   email: z.string().email(),
-  password: z.string().min(1),
+  password: z.string().min(8),
 })
 
-type LoginFormValues = z.infer<typeof loginSchema>
+type SignupFormValues = z.infer<typeof signupSchema>
 
-export function LoginPage() {
-  const navigate = useNavigate()
-  const setAuth = useAuthStore((s) => s.setAuth)
+export function SignupPage() {
+  const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+  const form = useForm<SignupFormValues>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: { businessName: "", email: "", password: "" },
   })
 
-  async function onSubmit(values: LoginFormValues) {
+  async function onSubmit(values: SignupFormValues) {
     setError(null)
     try {
-      const { token, user } = await login(values.email, values.password)
-      setAuth(token, user)
-      navigate("/dashboard")
+      await signup(values.businessName, values.email, values.password)
+      setSuccess(true)
     } catch {
-      setError("Invalid email or password.")
+      setError("Signup failed. Please try again.")
     }
+  }
+
+  if (success) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p role="status" className="text-center">
+          Account created!{" "}
+          <Link to="/login" className="underline">
+            Sign in
+          </Link>
+        </p>
+      </div>
+    )
   }
 
   return (
     <div className="flex min-h-screen items-center justify-center">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Sign in</CardTitle>
+          <CardTitle>Create account</CardTitle>
         </CardHeader>
         <CardContent>
           {error && (
@@ -59,6 +70,19 @@ export function LoginPage() {
           )}
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="businessName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Business name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Acme Inc." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="email"
@@ -86,19 +110,14 @@ export function LoginPage() {
                 )}
               />
               <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                Sign in
+                Create account
               </Button>
             </form>
           </Form>
           <p className="mt-4 text-center text-sm">
-            <Link to="/forgot-password" className="underline">
-              Forgot password?
-            </Link>
-          </p>
-          <p className="mt-2 text-center text-sm">
-            No account?{" "}
-            <Link to="/signup" className="underline">
-              Sign up
+            Already have an account?{" "}
+            <Link to="/login" className="underline">
+              Sign in
             </Link>
           </p>
         </CardContent>
