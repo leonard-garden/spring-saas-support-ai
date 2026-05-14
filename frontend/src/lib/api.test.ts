@@ -3,7 +3,7 @@ import axios from "axios"
 import MockAdapter from "axios-mock-adapter"
 import { api } from "./api"
 import {
-  clearAuth,
+  clearTokens,
   getAccessToken,
   setAccessToken,
   setRefreshToken,
@@ -15,7 +15,7 @@ const mock = new MockAdapter(api)
 const axiosMock = new MockAdapter(axios)
 
 beforeEach(() => {
-  clearAuth()
+  clearTokens()
   mock.reset()
   axiosMock.reset()
 })

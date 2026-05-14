@@ -5,7 +5,7 @@ import {
   setAccessToken,
   getRefreshToken,
   setRefreshToken,
-  clearAuth,
+  clearTokens,
 } from "./tokenStorage"
 
 const baseURL = import.meta.env.VITE_API_URL
@@ -68,7 +68,7 @@ api.interceptors.response.use(
       original.headers.Authorization = `Bearer ${newToken}`
       return api(original)
     } catch (refreshErr) {
-      clearAuth()
+      clearTokens()
       return Promise.reject(refreshErr)
     }
   }

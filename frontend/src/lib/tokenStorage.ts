@@ -22,7 +22,7 @@ export function clearRefreshToken(): void {
   localStorage.removeItem(REFRESH_TOKEN_KEY)
 }
 
-export function clearAuth(): void {
+export function clearTokens(): void {
   accessToken = null
   clearRefreshToken()
 }
