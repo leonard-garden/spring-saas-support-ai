@@ -6,7 +6,10 @@ import { SignupPage } from "@/pages/SignupPage"
 import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage"
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage"
 import { DashboardPage } from "@/pages/DashboardPage"
+import { MembersPage } from "@/pages/MembersPage"
+import { KbPage } from "@/pages/KbPage"
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
+import { AppShell } from "@/components/layout/AppShell"
 import { GuestRoute } from "@/components/auth/GuestRoute"
 import { useAuthInit } from "@/hooks/useAuthInit"
 
@@ -23,7 +26,11 @@ function AppRoutes() {
       <Route path="/signup" element={<GuestRoute><SignupPage /></GuestRoute>} />
       <Route path="/forgot-password" element={<GuestRoute><ForgotPasswordPage /></GuestRoute>} />
       <Route path="/reset-password" element={<GuestRoute><ResetPasswordPage /></GuestRoute>} />
-      <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+      <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/members" element={<MembersPage />} />
+        <Route path="/kb" element={<KbPage />} />
+      </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   )
