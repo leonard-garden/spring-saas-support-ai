@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Link, useSearchParams } from "react-router-dom"
+import { Eye, EyeOff } from "lucide-react"
 import { resetPassword } from "@/lib/authApi"
 import {
   Form,
@@ -33,6 +34,8 @@ export function ResetPasswordPage() {
   const token = searchParams.get("token")
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const form = useForm<ResetFormValues>({
     resolver: zodResolver(resetSchema),
@@ -96,7 +99,18 @@ export function ResetPasswordPage() {
                   <FormItem>
                     <FormLabel>New password</FormLabel>
                     <FormControl>
-                      <Input type="password" {...field} />
+                      <div className="relative">
+                        <Input type={showNewPassword ? "text" : "password"} className="pr-10" {...field} />
+                        <button
+                          type="button"
+                          aria-label={showNewPassword ? "Hide password" : "Show password"}
+                          tabIndex={-1}
+                          onClick={() => setShowNewPassword((v) => !v)}
+                          className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground"
+                        >
+                          {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -109,7 +123,18 @@ export function ResetPasswordPage() {
                   <FormItem>
                     <FormLabel>Confirm password</FormLabel>
                     <FormControl>
-                      <Input type="password" {...field} />
+                      <div className="relative">
+                        <Input type={showConfirmPassword ? "text" : "password"} className="pr-10" {...field} />
+                        <button
+                          type="button"
+                          aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                          tabIndex={-1}
+                          onClick={() => setShowConfirmPassword((v) => !v)}
+                          className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground"
+                        >
+                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
