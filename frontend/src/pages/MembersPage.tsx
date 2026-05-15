@@ -4,14 +4,17 @@ import { listMembers } from "@/lib/memberApi"
 import { MembersTable } from "@/components/members/MembersTable"
 import { MembersEmptyState } from "@/components/members/MembersEmptyState"
 import { InviteModal } from "@/components/members/InviteModal"
+import { RemoveConfirmDialog } from "@/components/members/RemoveConfirmDialog"
 import { Button } from "@/components/ui/button"
 import { useAuthStore } from "@/store/authStore"
+import type { MemberResponse } from "@/types/member"
 
 const PAGE_SIZE = 10
 
 export function MembersPage() {
   const [page, setPage] = useState(0)
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [removeTarget, setRemoveTarget] = useState<MemberResponse | null>(null)
   const user = useAuthStore((s) => s.user)
 
   const { data: members, isLoading, isError } = useQuery({
@@ -39,12 +42,21 @@ export function MembersPage() {
         )}
       </div>
       <InviteModal open={inviteOpen} onOpenChange={setInviteOpen} />
+      <RemoveConfirmDialog
+        member={removeTarget}
+        onOpenChange={(v) => { if (!v) setRemoveTarget(null) }}
+      />
 
       {members?.length === 0 ? (
         <MembersEmptyState />
       ) : (
         <>
-          <MembersTable members={paged} />
+          <MembersTable
+            members={paged}
+            canMutate={user?.role === "OWNER"}
+            currentUserId={user?.id ?? ""}
+            onRemove={setRemoveTarget}
+          />
           <div className="flex gap-2">
             <Button
               variant="outline"
