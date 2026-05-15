@@ -1,4 +1,4 @@
-export type Role = "OWNER" | "ADMIN" | "AGENT"
+export type Role = "OWNER" | "ADMIN" | "MEMBER"
 export type AuthStatus = "loading" | "authenticated" | "unauthenticated"
 
 export interface AuthUser {

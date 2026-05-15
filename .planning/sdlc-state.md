@@ -40,7 +40,7 @@ tasks:
 - "#73 | [Phase 05-03] Task 1: Build RemoveConfirmDialog (TDD) | closed"
 - "#74 | [Phase 05-03] Task 2: Add per-row role-change and remove actions to MembersTable (TDD) | closed"
 - "#75 | [Phase 05-03] Task 3: Wire RemoveConfirmDialog + mutation props into MembersPage | closed"
-- "#84 | [Phase 06-01] Task 1: Install shadcn Tooltip primitive | open"
+- "#84 | [Phase 06-01] Task 1: Install shadcn Tooltip primitive | closed"
 - "#85 | [Phase 06-01] Task 2: Replace KbPage with static empty state + disabled add button + M2 tooltip | open"
 - "#86 | [Phase 06-02] Task 1: Add password show/hide toggle to LoginPage | open"
 - "#87 | [Phase 06-02] Task 2: Add password show/hide toggle to SignupPage (and ResetPasswordPage if present) | open"
