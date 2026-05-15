@@ -1,11 +1,11 @@
 # SDLC Session — frontend-web-m1
 Started: 2026-05-13 21:18
 Idea: Làm frontend web cho M1
-Current phase: Phase 5 — Build (roadmap phase 3)
+Current phase: Phase 5 — Build (roadmap phase 4)
 build_complete: false
 milestone_phases: 2,3,4,5,6,7
-current_roadmap_phase: 3
-phase_branch: feature/phase-03-auth-pages
+current_roadmap_phase: 4
+phase_branch: feature/phase-04-app-shell-dashboard
 Gate statuses:
 - Gate 1 (→Discovery): approved
 - Gate 2 (→Design): approved
@@ -21,11 +21,14 @@ tasks:
 - "#37 | [Phase 02-02] Task 1: Build Zustand tri-state auth store (TDD) | closed"
 - "#38 | [Phase 02-02] Task 2: Build ProtectedRoute, GuestRoute, and useAuthInit hook (TDD) | closed"
 - "#39 | [Phase 02-02] Task 3: Wire App.tsx with guards, placeholder pages, and useAuthInit | closed"
-- "#45 | [Phase 03-01] Task 1: Add shadcn form component | open"
-- "#46 | [Phase 03-01] Task 2: Create authApi module | open"
-- "#47 | [Phase 03-01] Task 3: Build LoginPage, SignupPage and wire routes | open"
-- "#48 | [Phase 03-02] Task 1: Extend authApi with logout, forgotPassword, resetPassword | open"
-- "#49 | [Phase 03-02] Task 2: Build LogoutButton and wire into DashboardPage | open"
-- "#50 | [Phase 03-02] Task 3: Build ForgotPasswordPage, ResetPasswordPage and wire routes | open"
-- "#51 | [Phase 03-03] Task 1: Add shadcn alert component | open"
-- "#52 | [Phase 03-03] Task 2: Build EmailVerificationBanner and render on dashboard (TDD) | open"
+- "#45 | [Phase 03-01] Task 1: Add shadcn form component | closed"
+- "#46 | [Phase 03-01] Task 2: Create authApi module | closed"
+- "#47 | [Phase 03-01] Task 3: Build LoginPage, SignupPage and wire routes | closed"
+- "#48 | [Phase 03-02] Task 1: Extend authApi with logout, forgotPassword, resetPassword | closed"
+- "#49 | [Phase 03-02] Task 2: Build LogoutButton and wire into DashboardPage | closed"
+- "#50 | [Phase 03-02] Task 3: Build ForgotPasswordPage, ResetPasswordPage and wire routes | closed"
+- "#51 | [Phase 03-03] Task 1: Add shadcn alert component | closed"
+- "#52 | [Phase 03-03] Task 2: Build EmailVerificationBanner and render on dashboard (TDD) | closed"
+- "#61 | [Phase 04-01] Task 1: Build SidebarNavLink + Sidebar components (TDD) | open"
+- "#62 | [Phase 04-01] Task 2: Build AppShell, stub pages, convert App.tsx to layout route | open"
+- "#63 | [Phase 04-02] Task 1: Build StatCard, rebuild DashboardPage (TDD) | open"
