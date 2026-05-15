@@ -3,12 +3,16 @@ import { useQuery } from "@tanstack/react-query"
 import { listMembers } from "@/lib/memberApi"
 import { MembersTable } from "@/components/members/MembersTable"
 import { MembersEmptyState } from "@/components/members/MembersEmptyState"
+import { InviteModal } from "@/components/members/InviteModal"
 import { Button } from "@/components/ui/button"
+import { useAuthStore } from "@/store/authStore"
 
 const PAGE_SIZE = 10
 
 export function MembersPage() {
   const [page, setPage] = useState(0)
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const user = useAuthStore((s) => s.user)
 
   const { data: members, isLoading, isError } = useQuery({
     queryKey: ["members"],
@@ -28,7 +32,13 @@ export function MembersPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Members</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Members</h1>
+        {user?.role === "OWNER" && (
+          <Button onClick={() => setInviteOpen(true)}>Invite Member</Button>
+        )}
+      </div>
+      <InviteModal open={inviteOpen} onOpenChange={setInviteOpen} />
 
       {members?.length === 0 ? (
         <MembersEmptyState />
