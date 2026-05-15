@@ -1,11 +1,11 @@
 # SDLC Session — frontend-web-m1
 Started: 2026-05-13 21:18
 Idea: Làm frontend web cho M1
-Current phase: Phase 5 — Build (roadmap phase 6)
-build_complete: false
+Current phase: Phase 5 — Build (roadmap phase 7)
+build_complete: true
 milestone_phases: 2,3,4,5,6,7
-current_roadmap_phase: 6
-phase_branch: feature/phase-06-kb-ui-polish
+current_roadmap_phase: 7
+phase_branch: feature/phase-07-deploy-smoke-test
 Gate statuses:
 - Gate 1 (→Discovery): approved
 - Gate 2 (→Design): approved
@@ -41,6 +41,11 @@ tasks:
 - "#74 | [Phase 05-03] Task 2: Add per-row role-change and remove actions to MembersTable (TDD) | closed"
 - "#75 | [Phase 05-03] Task 3: Wire RemoveConfirmDialog + mutation props into MembersPage | closed"
 - "#84 | [Phase 06-01] Task 1: Install shadcn Tooltip primitive | closed"
-- "#85 | [Phase 06-01] Task 2: Replace KbPage with static empty state + disabled add button + M2 tooltip | open"
-- "#86 | [Phase 06-02] Task 1: Add password show/hide toggle to LoginPage | open"
-- "#87 | [Phase 06-02] Task 2: Add password show/hide toggle to SignupPage (and ResetPasswordPage if present) | open"
+- "#85 | [Phase 06-01] Task 2: Replace KbPage with static empty state + disabled add button + M2 tooltip | closed"
+- "#86 | [Phase 06-02] Task 1: Add password show/hide toggle to LoginPage | closed"
+- "#87 | [Phase 06-02] Task 2: Add password show/hide toggle to SignupPage (and ResetPasswordPage if present) | closed"
+- "#95 | [Phase 07-01] Task 1: Append frontend static-site service to render.yaml | closed"
+- "#96 | [Phase 07-01] Task 2: Operator deploys static site and verifies SPA routing | closed"
+- "#97 | [Phase 07-02] Task 1: Update backend CORS_ALLOWED_ORIGINS and redeploy | closed"
+- "#98 | [Phase 07-02] Task 2: Run full 7-step demo smoke test on deployed stack | closed"
+
