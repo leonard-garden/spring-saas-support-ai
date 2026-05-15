@@ -40,4 +40,15 @@ public class SpringMailEmailService implements EmailService {
                 + appBaseUrl + "/verify-email?token=" + verificationToken);
         mailSender.send(message);
     }
+
+    @Override
+    public void sendInvitationEmail(String toEmail, String rawToken) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject("You've been invited");
+        message.setText("You have been invited to join a workspace. Click the link below to accept:\n\n"
+                + appBaseUrl + "/invitation/accept?token=" + rawToken
+                + "\n\nThis link expires in 7 days.");
+        mailSender.send(message);
+    }
 }

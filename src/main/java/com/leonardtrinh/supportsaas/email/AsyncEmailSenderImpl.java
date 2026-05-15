@@ -19,8 +19,7 @@ public class AsyncEmailSenderImpl implements AsyncEmailSender {
     @Override
     @Async("taskExecutor")
     public void sendInvitationEmail(String email, String rawToken) {
-        // Dev stub — replace with Resend/SMTP in production
-        log.info("Sending invitation email to {} with token [redacted]", email);
+        emailService.sendInvitationEmail(email, rawToken);
     }
 
     @Override

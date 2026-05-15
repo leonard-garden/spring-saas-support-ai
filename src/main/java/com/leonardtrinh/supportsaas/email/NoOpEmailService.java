@@ -20,4 +20,9 @@ public class NoOpEmailService implements EmailService {
     public void sendEmailVerificationEmail(String toEmail, String verificationToken) {
         log.debug("NoOp: sendEmailVerificationEmail to={}", toEmail);
     }
+
+    @Override
+    public void sendInvitationEmail(String toEmail, String rawToken) {
+        log.debug("NoOp: sendInvitationEmail to={}", toEmail);
+    }
 }
