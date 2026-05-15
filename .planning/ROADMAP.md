@@ -138,7 +138,7 @@ Plans:
   2. Hard-refreshing any route (e.g., `/dashboard`, `/members`) returns the app, not a 404
   3. The Render frontend URL is added to the backend's `allowedOrigins` and cross-origin calls succeed
   4. The full demo flow completes without errors: signup → login → dashboard → invite member → logout
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
 - [ ] 07-01: Configure render.yaml with SPA rewrite rule and deploy static site
