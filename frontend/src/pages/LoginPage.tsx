@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { Eye, EyeOff } from "lucide-react"
 import { login } from "@/lib/authApi"
 import { useAuthStore } from "@/store/authStore"
 import {
@@ -28,6 +29,7 @@ export function LoginPage() {
   const navigate = useNavigate()
   const setAuth = useAuthStore((s) => s.setAuth)
   const [error, setError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -79,7 +81,18 @@ export function LoginPage() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" {...field} />
+                      <div className="relative">
+                        <Input type={showPassword ? "text" : "password"} className="pr-10" {...field} />
+                        <button
+                          type="button"
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                          tabIndex={-1}
+                          onClick={() => setShowPassword((v) => !v)}
+                          className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
