@@ -123,7 +123,8 @@ class InvitationManagementIT extends BaseIT {
         );
 
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(resp.getBody().data().expiresAt()).isAfter(originalExpiry);
+        assertThat(resp.getBody().data().expiresAt())
+                .isAfter(Instant.now().plus(71, ChronoUnit.HOURS));
     }
 
     @Test
@@ -135,6 +136,33 @@ class InvitationManagementIT extends BaseIT {
         ResponseEntity<Object> resp = restTemplate.exchange(
                 "/api/v1/invitations/" + UUID.randomUUID() + "/resend", HttpMethod.POST,
                 new HttpEntity<>(authHeader(owner.accessToken())),
+                new ParameterizedTypeReference<>() {}
+        );
+
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("resend: cross-tenant invitation id returns 404")
+    void resend_crossTenantId_returns404() {
+        String u1 = UUID.randomUUID().toString().substring(0, 8);
+        String u2 = UUID.randomUUID().toString().substring(0, 8);
+        AuthResponse tenant1 = doSignup("ResendIsoA " + u1, "riso1+" + u1 + "@example.com");
+        AuthResponse tenant2 = doSignup("ResendIsoB " + u2, "riso2+" + u2 + "@example.com");
+
+        // Create an invitation belonging to tenant1
+        InviteRequest req = new InviteRequest("cross+" + u1 + "@example.com", Role.MEMBER);
+        ResponseEntity<ApiResponse<InvitationResponse>> invResp = restTemplate.exchange(
+                "/api/v1/invitations/invite", HttpMethod.POST,
+                new HttpEntity<>(req, authHeader(tenant1.accessToken())),
+                new ParameterizedTypeReference<>() {}
+        );
+        UUID invId = invResp.getBody().data().id();
+
+        // Tenant2 tries to resend tenant1's invitation — should be 404
+        ResponseEntity<Object> resp = restTemplate.exchange(
+                "/api/v1/invitations/" + invId + "/resend", HttpMethod.POST,
+                new HttpEntity<>(authHeader(tenant2.accessToken())),
                 new ParameterizedTypeReference<>() {}
         );
 
@@ -183,5 +211,37 @@ class InvitationManagementIT extends BaseIT {
         );
 
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("revoke: cross-tenant invitation id returns 404")
+    void revoke_crossTenantId_returns404() {
+        String u1 = UUID.randomUUID().toString().substring(0, 8);
+        String u2 = UUID.randomUUID().toString().substring(0, 8);
+        AuthResponse tenant1 = doSignup("RevokeIsoA " + u1, "rviso1+" + u1 + "@example.com");
+        AuthResponse tenant2 = doSignup("RevokeIsoB " + u2, "rviso2+" + u2 + "@example.com");
+
+        // Create an invitation belonging to tenant1
+        InviteRequest req = new InviteRequest("crossrevoke+" + u1 + "@example.com", Role.MEMBER);
+        ResponseEntity<ApiResponse<InvitationResponse>> invResp = restTemplate.exchange(
+                "/api/v1/invitations/invite", HttpMethod.POST,
+                new HttpEntity<>(req, authHeader(tenant1.accessToken())),
+                new ParameterizedTypeReference<>() {}
+        );
+        UUID invId = invResp.getBody().data().id();
+
+        // Tenant2 tries to revoke tenant1's invitation — should be 404
+        ResponseEntity<Object> resp = restTemplate.exchange(
+                "/api/v1/invitations/" + invId, HttpMethod.DELETE,
+                new HttpEntity<>(authHeader(tenant2.accessToken())),
+                new ParameterizedTypeReference<>() {}
+        );
+
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        // Verify invitation still exists (not deleted by the cross-tenant attempt)
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM invitations WHERE id = ?", Integer.class, invId);
+        assertThat(count).isEqualTo(1);
     }
 }

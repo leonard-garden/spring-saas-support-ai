@@ -193,15 +193,22 @@ public class InvitationServiceImpl implements InvitationService {
             throw new AccessDeniedException("Only ADMIN or OWNER can resend invitations");
         }
 
+        UUID tenantId = caller.tenantId();
+
         // findById uses the Hibernate tenant filter — returns empty if invitation belongs to another tenant
         Invitation invitation = invitationRepository.findById(id)
                 .orElseThrow(() -> new InvitationNotFoundException(id));
+
+        // Explicit tenant isolation check (defense in depth)
+        if (!tenantId.equals(invitation.getBusinessId())) {
+            throw new InvitationNotFoundException(id);
+        }
 
         if (invitation.getAcceptedAt() != null) {
             throw new InvitationNotFoundException(id); // already accepted — treat as not found
         }
 
-        // Generate new token and reset expiry
+        // No expiry check here: resend intentionally revives expired invitations
         String rawToken = tokenGenerator.generateRawToken();
         invitation.setTokenHash(tokenGenerator.hash(rawToken));
         invitation.setExpiresAt(Instant.now().plus(72, ChronoUnit.HOURS));
@@ -222,8 +229,15 @@ public class InvitationServiceImpl implements InvitationService {
             throw new AccessDeniedException("Only ADMIN or OWNER can revoke invitations");
         }
 
+        UUID tenantId = caller.tenantId();
+
         Invitation invitation = invitationRepository.findById(id)
                 .orElseThrow(() -> new InvitationNotFoundException(id));
+
+        // Explicit tenant isolation check (defense in depth)
+        if (!tenantId.equals(invitation.getBusinessId())) {
+            throw new InvitationNotFoundException(id);
+        }
 
         if (invitation.getAcceptedAt() != null) {
             throw new InvitationNotFoundException(id);
