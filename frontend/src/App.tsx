@@ -5,6 +5,7 @@ import { LoginPage } from "@/pages/LoginPage"
 import { SignupPage } from "@/pages/SignupPage"
 import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage"
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage"
+import { AcceptInvitationPage } from "@/pages/AcceptInvitationPage"
 import { DashboardPage } from "@/pages/DashboardPage"
 import { MembersPage } from "@/pages/MembersPage"
 import { KbPage } from "@/pages/KbPage"
@@ -26,6 +27,7 @@ function AppRoutes() {
       <Route path="/signup" element={<GuestRoute><SignupPage /></GuestRoute>} />
       <Route path="/forgot-password" element={<GuestRoute><ForgotPasswordPage /></GuestRoute>} />
       <Route path="/reset-password" element={<GuestRoute><ResetPasswordPage /></GuestRoute>} />
+      <Route path="/invitation/accept" element={<AcceptInvitationPage />} />
       <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/members" element={<MembersPage />} />

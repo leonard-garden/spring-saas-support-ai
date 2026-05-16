@@ -42,6 +42,15 @@ export async function resetPassword(token: string, newPassword: string): Promise
   await api.post("/auth/reset-password", { token, newPassword })
 }
 
+export async function acceptInvitation(token: string, password: string): Promise<LoginResult> {
+  const { data: envelope } = await api.post<ApiResponse<AuthResponse>>("/invitations/accept", { token, password })
+  const auth = envelope.data!
+  setAccessToken(auth.accessToken)
+  setRefreshToken(auth.refreshToken)
+  const { data: meEnvelope } = await api.get<ApiResponse<MeResponse>>("/auth/me")
+  return { token: auth.accessToken, user: meEnvelope.data! }
+}
+
 export async function signup(
   businessName: string,
   email: string,
