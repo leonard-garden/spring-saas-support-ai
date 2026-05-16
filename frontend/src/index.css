@@ -37,6 +37,7 @@
     --radius: 0.5rem;
 
     --sidebar: 20 6% 15%;
+    --sidebar-foreground: 20 6% 95%;
   }
 
   * {
