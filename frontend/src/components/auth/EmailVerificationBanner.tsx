@@ -7,8 +7,8 @@ export function EmailVerificationBanner() {
   if (!user || user.emailVerified) return null
 
   return (
-    <div className="flex items-start gap-3 rounded-lg border-l-4 border-amber-400 bg-amber-50 px-4 py-3">
-      <TriangleAlert className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+    <div role="alert" className="flex items-start gap-3 rounded-lg border-l-4 border-amber-400 bg-amber-50 px-4 py-3">
+      <TriangleAlert className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" aria-hidden="true" />
       <div>
         <p className="text-sm font-semibold text-amber-900">Verify your email address</p>
         <p className="text-sm text-amber-800">
