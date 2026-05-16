@@ -44,7 +44,7 @@ export function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <AuthLayout>
+      <AuthLayout tagline="Reset your password." subtitle="This link is invalid or has expired.">
         <p role="alert" className="text-center text-sm text-destructive">
           Invalid or missing reset token.{" "}
           <Link to="/forgot-password" className="underline">
@@ -57,7 +57,7 @@ export function ResetPasswordPage() {
 
   if (success) {
     return (
-      <AuthLayout>
+      <AuthLayout tagline="You're all set." subtitle="Your password has been updated.">
         <p role="status" className="text-center text-sm text-muted-foreground">
           Password reset successfully.{" "}
           <Link to="/login" className="underline text-foreground">

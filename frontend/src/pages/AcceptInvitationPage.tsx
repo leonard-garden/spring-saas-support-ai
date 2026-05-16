@@ -46,7 +46,7 @@ export function AcceptInvitationPage() {
 
   if (!token) {
     return (
-      <AuthLayout>
+      <AuthLayout tagline="Join your team." subtitle="This invitation link is invalid or has expired.">
         <p role="alert" className="text-center text-sm text-destructive">
           Invalid or missing invitation link. Please ask your admin to resend the invitation.
         </p>
