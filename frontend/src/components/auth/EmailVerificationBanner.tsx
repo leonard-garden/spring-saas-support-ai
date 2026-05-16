@@ -1,5 +1,5 @@
+import { TriangleAlert } from "lucide-react"
 import { useAuthStore } from "@/store/authStore"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export function EmailVerificationBanner() {
   const user = useAuthStore((s) => s.user)
@@ -7,11 +7,14 @@ export function EmailVerificationBanner() {
   if (!user || user.emailVerified) return null
 
   return (
-    <Alert variant="destructive">
-      <AlertTitle>Verify your email address</AlertTitle>
-      <AlertDescription>
-        Please check your inbox and verify your email to unlock all features.
-      </AlertDescription>
-    </Alert>
+    <div className="flex items-start gap-3 rounded-lg border-l-4 border-amber-400 bg-amber-50 px-4 py-3">
+      <TriangleAlert className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+      <div>
+        <p className="text-sm font-semibold text-amber-900">Verify your email address</p>
+        <p className="text-sm text-amber-800">
+          Please check your inbox and verify your email to unlock all features.
+        </p>
+      </div>
+    </div>
   )
 }

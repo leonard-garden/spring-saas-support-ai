@@ -48,12 +48,12 @@ describe("Sidebar", () => {
     expect(screen.getByText(/Acme Inc/)).toBeDefined()
   })
 
-  it("active nav link has bg-primary class when at /members", () => {
+  it("active nav link has amber accent border when at /members", () => {
     renderAt("/members")
     const membersLink = screen.getByRole("link", { name: /members/i })
     const homeLink = screen.getByRole("link", { name: /home/i })
-    expect(membersLink.className).toContain("bg-primary")
-    expect(homeLink.className).not.toContain("bg-primary")
+    expect(membersLink.className).toContain("border-amber-400")
+    expect(homeLink.className).not.toContain("border-amber-400")
   })
 
   it("renders a Log out button", () => {
