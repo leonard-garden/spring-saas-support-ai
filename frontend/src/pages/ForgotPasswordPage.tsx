@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { AuthLayout } from "@/components/layout/AuthLayout"
 
 const forgotSchema = z.object({
   email: z.string().email(),
@@ -40,51 +40,45 @@ export function ForgotPasswordPage() {
 
   if (submitted) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p role="status" className="text-center">
+      <AuthLayout tagline="Check your inbox." subtitle="A reset link is on its way if that address exists.">
+        <p role="status" className="text-sm text-muted-foreground text-center">
           If that email exists, a reset link has been sent.{" "}
-          <Link to="/login" className="underline">
+          <Link to="/login" className="underline text-foreground">
             Back to sign in
           </Link>
         </p>
-      </div>
+      </AuthLayout>
     )
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Forgot password</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="you@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                Send reset link
-              </Button>
-            </form>
-          </Form>
-          <p className="mt-4 text-center text-sm">
-            <Link to="/login" className="underline">
-              Back to sign in
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    <AuthLayout tagline="Forgot your password?" subtitle="Enter your email and we'll send a reset link.">
+      <h1 className="font-display text-2xl font-bold text-foreground mb-6">Forgot password</h1>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input type="email" placeholder="you@example.com" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+            Send reset link
+          </Button>
+        </form>
+      </Form>
+      <p className="mt-4 text-center text-sm">
+        <Link to="/login" className="underline text-muted-foreground hover:text-foreground">
+          Back to sign in
+        </Link>
+      </p>
+    </AuthLayout>
   )
 }

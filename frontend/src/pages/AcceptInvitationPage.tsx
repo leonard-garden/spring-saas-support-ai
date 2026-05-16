@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { AuthLayout } from "@/components/layout/AuthLayout"
 
 const acceptSchema = z
   .object({
@@ -46,11 +46,11 @@ export function AcceptInvitationPage() {
 
   if (!token) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p role="alert" className="text-center text-destructive">
+      <AuthLayout>
+        <p role="alert" className="text-center text-sm text-destructive">
           Invalid or missing invitation link. Please ask your admin to resend the invitation.
         </p>
-      </div>
+      </AuthLayout>
     )
   }
 
@@ -66,80 +66,74 @@ export function AcceptInvitationPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Set your password</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {error && (
-            <p role="alert" className="mb-4 text-sm text-destructive">
-              {error}
-            </p>
-          )}
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input type={showPassword ? "text" : "password"} className="pr-10" {...field} />
-                        <button
-                          type="button"
-                          aria-label={showPassword ? "Hide password" : "Show password"}
-                          tabIndex={-1}
-                          onClick={() => setShowPassword((v) => !v)}
-                          className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground"
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirm password</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input type={showConfirm ? "text" : "password"} className="pr-10" {...field} />
-                        <button
-                          type="button"
-                          aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"}
-                          tabIndex={-1}
-                          onClick={() => setShowConfirm((v) => !v)}
-                          className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground"
-                        >
-                          {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                Create account
-              </Button>
-            </form>
-          </Form>
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link to="/login" className="underline">
-              Sign in
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    <AuthLayout tagline="You've been invited." subtitle="Set a password to join your team on Support AI.">
+      <h1 className="font-display text-2xl font-bold text-foreground mb-6">Set your password</h1>
+      {error && (
+        <p role="alert" className="mb-4 text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Password</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input type={showPassword ? "text" : "password"} className="pr-10" {...field} />
+                    <button
+                      type="button"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      tabIndex={-1}
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="confirmPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Confirm password</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input type={showConfirm ? "text" : "password"} className="pr-10" {...field} />
+                    <button
+                      type="button"
+                      aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"}
+                      tabIndex={-1}
+                      onClick={() => setShowConfirm((v) => !v)}
+                      className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground"
+                    >
+                      {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+            Create account
+          </Button>
+        </form>
+      </Form>
+      <p className="mt-4 text-center text-sm text-muted-foreground">
+        Already have an account?{" "}
+        <Link to="/login" className="underline text-foreground">
+          Sign in
+        </Link>
+      </p>
+    </AuthLayout>
   )
 }
