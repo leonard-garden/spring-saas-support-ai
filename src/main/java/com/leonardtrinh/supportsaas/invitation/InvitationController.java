@@ -82,6 +82,20 @@ public class InvitationController {
         return ApiResponse.ok(invitationService.resend(id, caller()));
     }
 
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @SecurityRequirement(name = "Bearer")
+    @Operation(summary = "Revoke a pending invitation")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "Invitation revoked"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Not authenticated"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient role"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Invitation not found or already accepted")
+    })
+    public void revoke(@PathVariable UUID id) {
+        invitationService.revoke(id, caller());
+    }
+
     private JwtClaims caller() {
         return (JwtClaims) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }

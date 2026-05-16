@@ -214,6 +214,24 @@ public class InvitationServiceImpl implements InvitationService {
                 saved.getExpiresAt(), saved.getCreatedAt());
     }
 
+    @Override
+    @Transactional
+    public void revoke(UUID id, JwtClaims caller) {
+        Role callerRole = Role.valueOf(caller.role());
+        if (callerRole != Role.ADMIN && callerRole != Role.OWNER) {
+            throw new AccessDeniedException("Only ADMIN or OWNER can revoke invitations");
+        }
+
+        Invitation invitation = invitationRepository.findById(id)
+                .orElseThrow(() -> new InvitationNotFoundException(id));
+
+        if (invitation.getAcceptedAt() != null) {
+            throw new InvitationNotFoundException(id);
+        }
+
+        invitationRepository.delete(invitation);
+    }
+
     /**
      * Resolves the effective plan for quota checks by looking up the active or trialing
      * subscription rather than business.planId (which always points to the free plan).

@@ -140,4 +140,48 @@ class InvitationManagementIT extends BaseIT {
 
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
+
+    // ── DELETE /api/v1/invitations/{id} ──
+
+    @Test
+    @DisplayName("revoke: deletes pending invitation, returns 204")
+    void revoke_validId_returns204() {
+        String u = UUID.randomUUID().toString().substring(0, 8);
+        AuthResponse owner = doSignup("RevokeCo " + u, "revokeowner+" + u + "@example.com");
+
+        InviteRequest req = new InviteRequest("torevoke+" + u + "@example.com", Role.MEMBER);
+        ResponseEntity<ApiResponse<InvitationResponse>> invResp = restTemplate.exchange(
+                "/api/v1/invitations/invite", HttpMethod.POST,
+                new HttpEntity<>(req, authHeader(owner.accessToken())),
+                new ParameterizedTypeReference<>() {}
+        );
+        UUID invId = invResp.getBody().data().id();
+
+        ResponseEntity<Void> resp = restTemplate.exchange(
+                "/api/v1/invitations/" + invId, HttpMethod.DELETE,
+                new HttpEntity<>(authHeader(owner.accessToken())),
+                Void.class
+        );
+
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM invitations WHERE id = ?", Integer.class, invId);
+        assertThat(count).isEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("revoke: non-existent id returns 404")
+    void revoke_unknownId_returns404() {
+        String u = UUID.randomUUID().toString().substring(0, 8);
+        AuthResponse owner = doSignup("Revoke404Co " + u, "rv404+" + u + "@example.com");
+
+        ResponseEntity<Object> resp = restTemplate.exchange(
+                "/api/v1/invitations/" + UUID.randomUUID(), HttpMethod.DELETE,
+                new HttpEntity<>(authHeader(owner.accessToken())),
+                new ParameterizedTypeReference<>() {}
+        );
+
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
 }

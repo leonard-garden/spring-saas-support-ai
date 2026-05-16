@@ -16,4 +16,6 @@ public interface InvitationService {
     Page<InvitationResponse> listPending(Pageable pageable, JwtClaims caller);
 
     InvitationResponse resend(UUID id, JwtClaims caller);
+
+    void revoke(UUID id, JwtClaims caller);
 }
