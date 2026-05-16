@@ -3,6 +3,7 @@ package com.leonardtrinh.supportsaas.tenant;
 import com.leonardtrinh.supportsaas.auth.AuthResponse;
 import com.leonardtrinh.supportsaas.common.ApiResponse;
 import com.leonardtrinh.supportsaas.common.BaseIT;
+import com.leonardtrinh.supportsaas.common.PagedResponse;
 import com.leonardtrinh.supportsaas.invitation.Invitation;
 import com.leonardtrinh.supportsaas.invitation.InvitationRepository;
 import com.leonardtrinh.supportsaas.member.Member;
@@ -183,13 +184,13 @@ class TenantIsolationIT extends BaseIT {
         AuthResponse tenantA = doSignup(uniqueName("ApiBizA"), uniqueEmail("apiOwnerA"));
         AuthResponse tenantB = doSignup(uniqueName("ApiBizB"), uniqueEmail("apiOwnerB"));
 
-        ResponseEntity<ApiResponse<List<MemberResponse>>> respA = restTemplate.exchange(
-                "/api/v1/members", HttpMethod.GET,
+        ResponseEntity<ApiResponse<PagedResponse<MemberResponse>>> respA = restTemplate.exchange(
+                "/api/v1/members?page=0&size=100", HttpMethod.GET,
                 new HttpEntity<>(authHeader(tenantA.accessToken())),
                 new ParameterizedTypeReference<>() {}
         );
-        ResponseEntity<ApiResponse<List<MemberResponse>>> respB = restTemplate.exchange(
-                "/api/v1/members", HttpMethod.GET,
+        ResponseEntity<ApiResponse<PagedResponse<MemberResponse>>> respB = restTemplate.exchange(
+                "/api/v1/members?page=0&size=100", HttpMethod.GET,
                 new HttpEntity<>(authHeader(tenantB.accessToken())),
                 new ParameterizedTypeReference<>() {}
         );
@@ -197,8 +198,8 @@ class TenantIsolationIT extends BaseIT {
         assertThat(respA.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(respB.getStatusCode()).isEqualTo(HttpStatus.OK);
 
-        List<UUID> idsA = respA.getBody().data().stream().map(MemberResponse::id).toList();
-        List<UUID> idsB = respB.getBody().data().stream().map(MemberResponse::id).toList();
+        List<UUID> idsA = respA.getBody().data().content().stream().map(MemberResponse::id).toList();
+        List<UUID> idsB = respB.getBody().data().content().stream().map(MemberResponse::id).toList();
 
         assertThat(idsA).contains(tenantA.memberId());
         assertThat(idsA).doesNotContain(tenantB.memberId());

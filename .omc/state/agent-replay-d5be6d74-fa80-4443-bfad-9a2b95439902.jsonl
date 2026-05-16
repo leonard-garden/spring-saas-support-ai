@@ -1,0 +1,6 @@
+{"t":0,"agent":"a76d6f7","agent_type":"harness-optimizer","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"a76d6f7","agent_type":"harness-optimizer","event":"agent_stop","success":true,"duration_ms":90953}
+{"t":0,"agent":"ac5032c","agent_type":"unknown","event":"agent_stop","success":true}
+{"t":0,"agent":"a0966aa","agent_type":"unknown","event":"agent_stop","success":true}
+{"t":0,"agent":"a17dfac","agent_type":"unknown","event":"agent_stop","success":true}
+{"t":0,"agent":"a5463d9","agent_type":"unknown","event":"agent_stop","success":true}

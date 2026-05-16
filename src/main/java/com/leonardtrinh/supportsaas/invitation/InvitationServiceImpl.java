@@ -18,6 +18,8 @@ import com.leonardtrinh.supportsaas.member.MemberRepository;
 import com.leonardtrinh.supportsaas.member.Role;
 import com.leonardtrinh.supportsaas.tenant.BusinessRepository;
 import com.leonardtrinh.supportsaas.tenant.TenantContext;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -169,6 +171,79 @@ public class InvitationServiceImpl implements InvitationService {
         } finally {
             TenantContext.clear();
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<InvitationResponse> listPending(Pageable pageable, JwtClaims caller) {
+        Role callerRole = Role.valueOf(caller.role());
+        if (callerRole != Role.ADMIN && callerRole != Role.OWNER) {
+            throw new AccessDeniedException("Only ADMIN or OWNER can list invitations");
+        }
+        return invitationRepository.findAllPending(Instant.now(), pageable)
+                .map(i -> new InvitationResponse(
+                        i.getId(), i.getEmail(), i.getRole(), i.getExpiresAt(), i.getCreatedAt()));
+    }
+
+    @Override
+    @Transactional
+    public InvitationResponse resend(UUID id, JwtClaims caller) {
+        Role callerRole = Role.valueOf(caller.role());
+        if (callerRole != Role.ADMIN && callerRole != Role.OWNER) {
+            throw new AccessDeniedException("Only ADMIN or OWNER can resend invitations");
+        }
+
+        UUID tenantId = caller.tenantId();
+
+        // findById uses the Hibernate tenant filter — returns empty if invitation belongs to another tenant
+        Invitation invitation = invitationRepository.findById(id)
+                .orElseThrow(() -> new InvitationNotFoundException(id));
+
+        // Explicit tenant isolation check (defense in depth)
+        if (!tenantId.equals(invitation.getBusinessId())) {
+            throw new InvitationNotFoundException(id);
+        }
+
+        if (invitation.getAcceptedAt() != null) {
+            throw new InvitationNotFoundException(id); // already accepted — treat as not found
+        }
+
+        // No expiry check here: resend intentionally revives expired invitations
+        String rawToken = tokenGenerator.generateRawToken();
+        invitation.setTokenHash(tokenGenerator.hash(rawToken));
+        invitation.setExpiresAt(Instant.now().plus(72, ChronoUnit.HOURS));
+        Invitation saved = invitationRepository.save(invitation);
+
+        asyncEmailSender.sendInvitationEmail(saved.getEmail(), rawToken);
+
+        return new InvitationResponse(
+                saved.getId(), saved.getEmail(), saved.getRole(),
+                saved.getExpiresAt(), saved.getCreatedAt());
+    }
+
+    @Override
+    @Transactional
+    public void revoke(UUID id, JwtClaims caller) {
+        Role callerRole = Role.valueOf(caller.role());
+        if (callerRole != Role.ADMIN && callerRole != Role.OWNER) {
+            throw new AccessDeniedException("Only ADMIN or OWNER can revoke invitations");
+        }
+
+        UUID tenantId = caller.tenantId();
+
+        Invitation invitation = invitationRepository.findById(id)
+                .orElseThrow(() -> new InvitationNotFoundException(id));
+
+        // Explicit tenant isolation check (defense in depth)
+        if (!tenantId.equals(invitation.getBusinessId())) {
+            throw new InvitationNotFoundException(id);
+        }
+
+        if (invitation.getAcceptedAt() != null) {
+            throw new InvitationNotFoundException(id);
+        }
+
+        invitationRepository.delete(invitation);
     }
 
     /**

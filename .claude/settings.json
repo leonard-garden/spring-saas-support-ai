@@ -26,17 +26,6 @@
     ]
   },
   "hooks": {
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "INPUT=$(cat); printf '%s | session=%s | branch=%s\\n' \"$(date '+%Y-%m-%d %H:%M')\" \"$(echo \"$INPUT\" | jq -r '.session_id // \"unknown\"')\" \"$(git -C /Users/leonard/Workspace/leonard-garden/spring-saas-support-ai rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)\" >> /Users/leonard/Workspace/leonard-garden/spring-saas-support-ai/.omc/session-log.txt"
-          }
-        ]
-      }
-    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",

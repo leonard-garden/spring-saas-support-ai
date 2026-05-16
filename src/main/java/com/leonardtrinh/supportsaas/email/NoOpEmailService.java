@@ -25,4 +25,9 @@ public class NoOpEmailService implements EmailService {
     public void sendInvitationEmail(String toEmail, String rawToken) {
         log.warn("Mail not configured. Invitation email NOT sent to {}", toEmail);
     }
+
+    @Override
+    public void sendInvitationEmail(String toEmail, String rawToken) {
+        log.debug("NoOp: sendInvitationEmail to={}", toEmail);
+    }
 }
