@@ -102,7 +102,7 @@ class MemberManagementIT {
 
         InviteRequest req = new InviteRequest("invitee+" + unique + "@example.com", Role.ADMIN);
         ResponseEntity<ApiResponse<InvitationResponse>> resp = restTemplate.exchange(
-                "/api/v1/members/invite",
+                "/api/v1/invitations/invite",
                 HttpMethod.POST,
                 new HttpEntity<>(req, authHeader(owner.accessToken())),
                 new ParameterizedTypeReference<>() {}
@@ -125,7 +125,7 @@ class MemberManagementIT {
         // Try to invite the owner's own email (already a member)
         InviteRequest req = new InviteRequest("owner2+" + unique + "@example.com", Role.ADMIN);
         ResponseEntity<Map<String, Object>> resp = restTemplate.exchange(
-                "/api/v1/members/invite",
+                "/api/v1/invitations/invite",
                 HttpMethod.POST,
                 new HttpEntity<>(req, authHeader(owner.accessToken())),
                 new ParameterizedTypeReference<>() {}
@@ -144,7 +144,7 @@ class MemberManagementIT {
 
         // First invite succeeds
         ResponseEntity<ApiResponse<InvitationResponse>> first = restTemplate.exchange(
-                "/api/v1/members/invite",
+                "/api/v1/invitations/invite",
                 HttpMethod.POST,
                 new HttpEntity<>(req, authHeader(owner.accessToken())),
                 new ParameterizedTypeReference<>() {}
@@ -153,7 +153,7 @@ class MemberManagementIT {
 
         // Second invite returns 409
         ResponseEntity<Map<String, Object>> second = restTemplate.exchange(
-                "/api/v1/members/invite",
+                "/api/v1/invitations/invite",
                 HttpMethod.POST,
                 new HttpEntity<>(req, authHeader(owner.accessToken())),
                 new ParameterizedTypeReference<>() {}
@@ -185,7 +185,7 @@ class MemberManagementIT {
         // Member tries to invite → 403
         InviteRequest req = new InviteRequest("another+" + unique + "@example.com", Role.MEMBER);
         ResponseEntity<Map<String, Object>> resp = restTemplate.exchange(
-                "/api/v1/members/invite",
+                "/api/v1/invitations/invite",
                 HttpMethod.POST,
                 new HttpEntity<>(req, authHeader(memberToken)),
                 new ParameterizedTypeReference<>() {}

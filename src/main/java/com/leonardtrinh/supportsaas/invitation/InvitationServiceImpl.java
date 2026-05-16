@@ -18,6 +18,8 @@ import com.leonardtrinh.supportsaas.member.MemberRepository;
 import com.leonardtrinh.supportsaas.member.Role;
 import com.leonardtrinh.supportsaas.tenant.BusinessRepository;
 import com.leonardtrinh.supportsaas.tenant.TenantContext;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -169,6 +171,17 @@ public class InvitationServiceImpl implements InvitationService {
         } finally {
             TenantContext.clear();
         }
+    }
+
+    @Override
+    public Page<InvitationResponse> listPending(Pageable pageable, JwtClaims caller) {
+        Role callerRole = Role.valueOf(caller.role());
+        if (callerRole != Role.ADMIN && callerRole != Role.OWNER) {
+            throw new AccessDeniedException("Only ADMIN or OWNER can list invitations");
+        }
+        return invitationRepository.findAllPending(Instant.now(), pageable)
+                .map(i -> new InvitationResponse(
+                        i.getId(), i.getEmail(), i.getRole(), i.getExpiresAt(), i.getCreatedAt()));
     }
 
     /**
