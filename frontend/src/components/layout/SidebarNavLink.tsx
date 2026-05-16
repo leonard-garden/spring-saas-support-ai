@@ -16,7 +16,7 @@ export function SidebarNavLink({ to, icon, label, end }: SidebarNavLinkProps) {
       className={({ isActive }) =>
         `flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
           isActive
-            ? "bg-stone-800 text-white border-l-2 border-amber-400 pl-[10px]"
+            ? "bg-stone-800 text-white border-l-2 border-amber-400 pl-2.5"
             : "text-stone-400 hover:bg-stone-800 hover:text-white"
         }`
       }
