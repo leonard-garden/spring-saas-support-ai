@@ -5,7 +5,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Plus Jakarta Sans", "system-ui", "sans-serif"],
+        sans: ["DM Sans", "sans-serif"],
+        display: ["Fraunces", "serif"],
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -46,14 +47,7 @@ export default {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
-        brand: {
-          50: "#F5F3FF",
-          100: "#EDE9FE",
-          500: "#8B5CF6",
-          600: "#7C3AED",
-          700: "#6D28D9",
-          900: "#4C1D95",
-        },
+        sidebar: "hsl(var(--sidebar))",
       },
     },
   },
