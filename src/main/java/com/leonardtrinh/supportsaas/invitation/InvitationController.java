@@ -15,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/v1/invitations")
 @Tag(name = "Invitations", description = "Invite members and accept invitations")
@@ -65,6 +67,19 @@ public class InvitationController {
         JwtClaims caller = caller();
         InvitationResponse response = invitationService.invite(request, caller);
         return ApiResponse.ok(response);
+    }
+
+    @PostMapping("/{id}/resend")
+    @SecurityRequirement(name = "Bearer")
+    @Operation(summary = "Resend a pending invitation email and reset expiry to 72 hours")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Invitation resent"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Not authenticated"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient role"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Invitation not found or already accepted")
+    })
+    public ApiResponse<InvitationResponse> resend(@PathVariable UUID id) {
+        return ApiResponse.ok(invitationService.resend(id, caller()));
     }
 
     private JwtClaims caller() {

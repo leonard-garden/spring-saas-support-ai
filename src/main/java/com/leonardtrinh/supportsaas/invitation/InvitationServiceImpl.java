@@ -185,6 +185,35 @@ public class InvitationServiceImpl implements InvitationService {
                         i.getId(), i.getEmail(), i.getRole(), i.getExpiresAt(), i.getCreatedAt()));
     }
 
+    @Override
+    @Transactional
+    public InvitationResponse resend(UUID id, JwtClaims caller) {
+        Role callerRole = Role.valueOf(caller.role());
+        if (callerRole != Role.ADMIN && callerRole != Role.OWNER) {
+            throw new AccessDeniedException("Only ADMIN or OWNER can resend invitations");
+        }
+
+        // findById uses the Hibernate tenant filter — returns empty if invitation belongs to another tenant
+        Invitation invitation = invitationRepository.findById(id)
+                .orElseThrow(() -> new InvitationNotFoundException(id));
+
+        if (invitation.getAcceptedAt() != null) {
+            throw new InvitationNotFoundException(id); // already accepted — treat as not found
+        }
+
+        // Generate new token and reset expiry
+        String rawToken = tokenGenerator.generateRawToken();
+        invitation.setTokenHash(tokenGenerator.hash(rawToken));
+        invitation.setExpiresAt(Instant.now().plus(72, ChronoUnit.HOURS));
+        Invitation saved = invitationRepository.save(invitation);
+
+        asyncEmailSender.sendInvitationEmail(saved.getEmail(), rawToken);
+
+        return new InvitationResponse(
+                saved.getId(), saved.getEmail(), saved.getRole(),
+                saved.getExpiresAt(), saved.getCreatedAt());
+    }
+
     /**
      * Resolves the effective plan for quota checks by looking up the active or trialing
      * subscription rather than business.planId (which always points to the free plan).

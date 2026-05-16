@@ -96,4 +96,48 @@ class InvitationManagementIT extends BaseIT {
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(resp.getBody().data().totalElements()).isEqualTo(0);
     }
+
+    // ── POST /api/v1/invitations/{id}/resend ──
+
+    @Test
+    @DisplayName("resend: resets expiry and returns updated invitation")
+    void resend_validId_resetsExpiry() {
+        String u = UUID.randomUUID().toString().substring(0, 8);
+        AuthResponse owner = doSignup("ResendCo " + u, "resendowner+" + u + "@example.com");
+
+        // Create a pending invitation via the API to get its ID
+        InviteRequest req = new InviteRequest("toresend+" + u + "@example.com", Role.MEMBER);
+        ResponseEntity<ApiResponse<InvitationResponse>> invResp = restTemplate.exchange(
+                "/api/v1/invitations/invite", HttpMethod.POST,
+                new HttpEntity<>(req, authHeader(owner.accessToken())),
+                new ParameterizedTypeReference<>() {}
+        );
+        UUID invId = invResp.getBody().data().id();
+        Instant originalExpiry = invResp.getBody().data().expiresAt();
+
+        // Resend
+        ResponseEntity<ApiResponse<InvitationResponse>> resp = restTemplate.exchange(
+                "/api/v1/invitations/" + invId + "/resend", HttpMethod.POST,
+                new HttpEntity<>(authHeader(owner.accessToken())),
+                new ParameterizedTypeReference<>() {}
+        );
+
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(resp.getBody().data().expiresAt()).isAfter(originalExpiry);
+    }
+
+    @Test
+    @DisplayName("resend: non-existent id returns 404")
+    void resend_unknownId_returns404() {
+        String u = UUID.randomUUID().toString().substring(0, 8);
+        AuthResponse owner = doSignup("Resend404Co " + u, "r404+" + u + "@example.com");
+
+        ResponseEntity<Object> resp = restTemplate.exchange(
+                "/api/v1/invitations/" + UUID.randomUUID() + "/resend", HttpMethod.POST,
+                new HttpEntity<>(authHeader(owner.accessToken())),
+                new ParameterizedTypeReference<>() {}
+        );
+
+        assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
 }
