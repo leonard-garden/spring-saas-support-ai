@@ -25,7 +25,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HexFormat;
-import java.util.List;
+import com.leonardtrinh.supportsaas.common.PagedResponse;
 import java.util.Map;
 import java.util.UUID;
 
@@ -273,8 +273,8 @@ class MemberManagementIT {
     }
 
     @Test
-    @DisplayName("listMembers: returns only members of the caller's tenant")
-    void listMembers_returnsOnlyTenantMembers() {
+    @DisplayName("listMembers: returns paginated members scoped to caller's tenant")
+    void listMembers_returnsPaginatedTenantMembers() {
         String u1 = UUID.randomUUID().toString().substring(0, 8);
         String u2 = UUID.randomUUID().toString().substring(0, 8);
         AuthResponse tenant1 = doSignup("TenantA " + u1, "ownerA+" + u1 + "@example.com");
@@ -288,22 +288,22 @@ class MemberManagementIT {
                 new HttpEntity<>(new AcceptInvitationRequest(rawToken, "password123")),
                 new ParameterizedTypeReference<ApiResponse<AuthResponse>>() {});
 
-        // Tenant1 sees 2 members, tenant2 sees 1
-        ResponseEntity<ApiResponse<List<MemberResponse>>> resp1 = restTemplate.exchange(
-                "/api/v1/members", HttpMethod.GET,
+        ResponseEntity<ApiResponse<PagedResponse<MemberResponse>>> resp1 = restTemplate.exchange(
+                "/api/v1/members?page=0&size=10", HttpMethod.GET,
                 new HttpEntity<>(authHeader(tenant1.accessToken())),
                 new ParameterizedTypeReference<>() {}
         );
-        ResponseEntity<ApiResponse<List<MemberResponse>>> resp2 = restTemplate.exchange(
-                "/api/v1/members", HttpMethod.GET,
+        ResponseEntity<ApiResponse<PagedResponse<MemberResponse>>> resp2 = restTemplate.exchange(
+                "/api/v1/members?page=0&size=10", HttpMethod.GET,
                 new HttpEntity<>(authHeader(tenant2.accessToken())),
                 new ParameterizedTypeReference<>() {}
         );
 
         assertThat(resp1.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(resp2.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(resp1.getBody().data()).hasSize(2);
-        assertThat(resp2.getBody().data()).hasSize(1);
+        assertThat(resp1.getBody().data().content()).hasSize(2);
+        assertThat(resp1.getBody().data().totalElements()).isEqualTo(2);
+        assertThat(resp2.getBody().data().content()).hasSize(1);
     }
 
     @Test
