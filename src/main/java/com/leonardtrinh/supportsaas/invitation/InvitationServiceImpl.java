@@ -174,6 +174,7 @@ public class InvitationServiceImpl implements InvitationService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<InvitationResponse> listPending(Pageable pageable, JwtClaims caller) {
         Role callerRole = Role.valueOf(caller.role());
         if (callerRole != Role.ADMIN && callerRole != Role.OWNER) {
