@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.leonardtrinh.supportsaas.auth.JwtServiceImplTest
--------------------------------------------------------------------------------
-Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.583 s -- in com.leonardtrinh.supportsaas.auth.JwtServiceImplTest
