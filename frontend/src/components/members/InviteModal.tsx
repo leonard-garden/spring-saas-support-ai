@@ -64,7 +64,8 @@ export function InviteModal({ open, onOpenChange }: InviteModalProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Invite Member</DialogTitle>
+          <DialogTitle>Invite a Member</DialogTitle>
+          <p className="text-sm text-muted-foreground">They'll receive an email with an invite link.</p>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
@@ -73,9 +74,9 @@ export function InviteModal({ open, onOpenChange }: InviteModalProps) {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel className="text-xs uppercase tracking-widest">Email Address</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="colleague@example.com" {...field} />
+                    <Input type="email" placeholder="colleague@company.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -86,7 +87,7 @@ export function InviteModal({ open, onOpenChange }: InviteModalProps) {
               name="role"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Role</FormLabel>
+                  <FormLabel className="text-xs uppercase tracking-widest">Role</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -115,8 +116,8 @@ export function InviteModal({ open, onOpenChange }: InviteModalProps) {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={mutation.isPending}>
-                Send Invite
+              <Button type="submit" disabled={mutation.isPending} className="bg-amber-500 hover:bg-amber-600 text-white">
+                Send Invite →
               </Button>
             </div>
           </form>

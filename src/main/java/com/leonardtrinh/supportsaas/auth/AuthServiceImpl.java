@@ -255,6 +255,38 @@ public class AuthServiceImpl implements AuthService {
         emailVerificationTokenRepository.invalidateAllActiveByMemberId(member.getId(), Instant.now());
     }
 
+    @Override
+    @Transactional
+    public void resendVerificationEmail(JwtClaims caller) {
+        Member member = memberRepository.findById(caller.memberId())
+                .orElseThrow(() -> new RuntimeException("Member not found"));
+
+        if (member.isEmailVerified()) {
+            return;
+        }
+
+        emailVerificationTokenRepository.invalidateAllActiveByMemberId(member.getId(), Instant.now());
+
+        byte[] verifyBytes = new byte[32];
+        new java.security.SecureRandom().nextBytes(verifyBytes);
+        String verifyPlaintext = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(verifyBytes);
+        EmailVerificationToken token = new EmailVerificationToken();
+        token.setMemberId(member.getId());
+        token.setTokenHash(TokenHasher.sha256Hex(verifyPlaintext));
+        token.setExpiresAt(Instant.now().plus(24, ChronoUnit.HOURS));
+        emailVerificationTokenRepository.save(token);
+
+        String emailToSend = member.getEmail();
+        String tokenToSend = verifyPlaintext;
+        org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+            new org.springframework.transaction.support.TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    emailSender.sendEmailVerificationAsync(emailToSend, tokenToSend);
+                }
+            });
+    }
+
     private String slugify(String input) {
         String lower = input.toLowerCase();
         String slug = NON_ALPHANUMERIC.matcher(lower).replaceAll("-");

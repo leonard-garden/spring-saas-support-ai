@@ -16,6 +16,14 @@ export interface ApiResponse<T> {
   error: string | null
 }
 
+export interface PagedResponse<T> {
+  content: T[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
 export interface AuthResponse {
   accessToken: string
   refreshToken: string

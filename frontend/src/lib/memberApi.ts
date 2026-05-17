@@ -1,14 +1,14 @@
 import { api } from "./api"
-import type { ApiResponse } from "../types/auth"
+import type { ApiResponse, PagedResponse } from "../types/auth"
 import type { MemberResponse, InviteRequest, InviteResponse, UpdateRoleRequest } from "../types/member"
 
 export async function listMembers(): Promise<MemberResponse[]> {
-  const { data: envelope } = await api.get<ApiResponse<MemberResponse[]>>("/members")
-  return envelope.data!
+  const { data: envelope } = await api.get<ApiResponse<PagedResponse<MemberResponse>>>("/members?size=100")
+  return envelope.data!.content
 }
 
 export async function inviteMember(req: InviteRequest): Promise<InviteResponse> {
-  const { data: envelope } = await api.post<ApiResponse<InviteResponse>>("/members/invite", req)
+  const { data: envelope } = await api.post<ApiResponse<InviteResponse>>("/invitations/invite", req)
   return envelope.data!
 }
 

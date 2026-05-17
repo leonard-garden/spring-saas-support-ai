@@ -51,6 +51,14 @@ export async function acceptInvitation(token: string, password: string): Promise
   return { token: auth.accessToken, user: meEnvelope.data! }
 }
 
+export async function verifyEmail(token: string): Promise<void> {
+  await api.post("/auth/verify-email", { token })
+}
+
+export async function resendVerificationEmail(): Promise<void> {
+  await api.post("/auth/resend-verification")
+}
+
 export async function signup(
   businessName: string,
   email: string,
