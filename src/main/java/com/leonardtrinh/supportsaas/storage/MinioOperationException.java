@@ -1,7 +1,10 @@
 package com.leonardtrinh.supportsaas.storage;
 
-public class MinioOperationException extends RuntimeException {
+import com.leonardtrinh.supportsaas.common.AppException;
+import org.springframework.http.HttpStatus;
+
+public class MinioOperationException extends AppException {
     public MinioOperationException(String message, Throwable cause) {
-        super(message, cause);
+        super(HttpStatus.INTERNAL_SERVER_ERROR, "MINIO_OPERATION_FAILED", message, cause);
     }
 }
