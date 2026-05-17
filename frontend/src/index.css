@@ -1,0 +1,49 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=DM+Sans:wght@400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 30 14% 97%;
+    --foreground: 20 6% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 20 6% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 6% 10%;
+
+    --primary: 38 92% 50%;
+    --primary-foreground: 20 6% 15%;
+
+    --secondary: 30 6% 96%;
+    --secondary-foreground: 20 6% 25%;
+
+    --muted: 30 6% 96%;
+    --muted-foreground: 25 5% 45%;
+
+    --accent: 30 6% 96%;
+    --accent-foreground: 20 6% 25%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 20 6% 90%;
+    --input: 20 5% 83%;
+    --ring: 38 92% 50%;
+
+    --radius: 0.5rem;
+
+    --sidebar: 20 6% 15%;
+    --sidebar-foreground: 20 6% 95%;
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}

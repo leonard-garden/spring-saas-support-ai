@@ -1,6 +1,9 @@
 # IDE
 .idea/
 
+# Brainstorm session artifacts
+.superpowers/
+
 # Build output
 target/
 

@@ -98,6 +98,18 @@ public class AuthController {
         authService.resetPassword(request);
     }
 
+    @PostMapping("/resend-verification")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @SecurityRequirement(name = "Bearer")
+    @Operation(summary = "Resend email verification link to the current user")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "Verification email sent"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Not authenticated")
+    })
+    public void resendVerificationEmail(@AuthenticationPrincipal JwtClaims claims) {
+        authService.resendVerificationEmail(claims);
+    }
+
     @PostMapping("/verify-email")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Verify email address using token from email")
