@@ -20,4 +20,9 @@ public class NoOpEmailService implements EmailService {
     public void sendEmailVerificationEmail(String toEmail, String verificationToken) {
         log.warn("Mail not configured. Verification email NOT sent to {}", toEmail);
     }
+
+    @Override
+    public void sendInvitationEmail(String toEmail, String rawToken) {
+        log.warn("Mail not configured. Invitation email NOT sent to {}", toEmail);
+    }
 }

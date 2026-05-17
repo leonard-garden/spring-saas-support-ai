@@ -17,4 +17,6 @@ public interface AuthService {
     void resetPassword(ResetPasswordRequest request);
 
     void verifyEmail(VerifyEmailRequest request);
+
+    void resendVerificationEmail(JwtClaims caller);
 }

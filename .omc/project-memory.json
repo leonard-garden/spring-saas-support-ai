@@ -1,0 +1,159 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1778396790020,
+  "projectRoot": "/Users/leonard/Workspace/leonard-garden/spring-saas-support-ai",
+  "techStack": {
+    "languages": [
+      {
+        "name": "Java",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "pom.xml"
+        ]
+      }
+    ],
+    "frameworks": [],
+    "packageManager": "maven",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "docs",
+      "src"
+    ],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 4,
+      "lastAccessed": 1778396790013,
+      "keyFiles": [
+        "DIAGRAMS.md",
+        "FORGE_SKILL_DESIGN.md",
+        "PRD.md",
+        "SYSTEM_DESIGN_ANALYSIS.md"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 0,
+      "lastAccessed": 1778396790013,
+      "keyFiles": []
+    },
+    "target": {
+      "path": "target",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1778396790013,
+      "keyFiles": [
+        "spring-saas-support-ai-0.1.0-SNAPSHOT.jar",
+        "spring-saas-support-ai-0.1.0-SNAPSHOT.jar.original"
+      ]
+    },
+    "src/test": {
+      "path": "src/test",
+      "purpose": "Test files",
+      "fileCount": 0,
+      "lastAccessed": 1778396790014,
+      "keyFiles": []
+    }
+  },
+  "hotPaths": [
+    {
+      "path": ".claude/settings.json",
+      "accessCount": 6,
+      "lastAccessed": 1778401826008,
+      "type": "file"
+    },
+    {
+      "path": "CLAUDE.md",
+      "accessCount": 2,
+      "lastAccessed": 1778399721512,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/forge/SKILL.md",
+      "accessCount": 1,
+      "lastAccessed": 1778397363487,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/forge/evals/evals.json",
+      "accessCount": 1,
+      "lastAccessed": 1778397363853,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/forge/rules/architecture.md",
+      "accessCount": 1,
+      "lastAccessed": 1778397370766,
+      "type": "file"
+    },
+    {
+      "path": ".claude/skills/forge/rules/coding-style.md",
+      "accessCount": 1,
+      "lastAccessed": 1778397371145,
+      "type": "file"
+    },
+    {
+      "path": "pom.xml",
+      "accessCount": 1,
+      "lastAccessed": 1778399047560,
+      "type": "file"
+    },
+    {
+      "path": "src/main/resources/application.yml",
+      "accessCount": 1,
+      "lastAccessed": 1778399054905,
+      "type": "file"
+    },
+    {
+      "path": "src/main/resources/application-dev.yml",
+      "accessCount": 1,
+      "lastAccessed": 1778399060631,
+      "type": "file"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "accessCount": 1,
+      "lastAccessed": 1778399723342,
+      "type": "file"
+    },
+    {
+      "path": ".claude/hooks/validate-command.py",
+      "accessCount": 1,
+      "lastAccessed": 1778399748618,
+      "type": "file"
+    },
+    {
+      "path": ".claude/hooks/protect-files.py",
+      "accessCount": 1,
+      "lastAccessed": 1778399749597,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

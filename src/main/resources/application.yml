@@ -40,5 +40,9 @@ jwt:
   access-token-expiration-ms: 900000
   refresh-token-expiration-ms: 604800000
 
+app:
+  cors:
+    allowed-origins: http://localhost:3000
+
 server:
   port: ${PORT:8081}

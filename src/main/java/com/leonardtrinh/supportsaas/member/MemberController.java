@@ -2,11 +2,14 @@ package com.leonardtrinh.supportsaas.member;
 
 import com.leonardtrinh.supportsaas.auth.JwtClaims;
 import com.leonardtrinh.supportsaas.common.ApiResponse;
+import com.leonardtrinh.supportsaas.common.PagedResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -14,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 
 import static com.leonardtrinh.supportsaas.member.Role.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -30,15 +32,16 @@ public class MemberController {
     }
 
     @GetMapping
-    @Operation(summary = "List all members in the tenant")
+    @Operation(summary = "List all members in the tenant (paginated)")
     @ApiResponses({
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Member list returned"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Member page returned"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Not authenticated"),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Insufficient role")
     })
-    public ApiResponse<List<MemberResponse>> listAll() {
+    public ApiResponse<PagedResponse<MemberResponse>> listAll(
+            @PageableDefault(size = 10) Pageable pageable) {
         requireAdminOrOwner();
-        return ApiResponse.ok(memberService.listAll());
+        return ApiResponse.ok(PagedResponse.from(memberService.listAll(pageable)));
     }
 
     @GetMapping("/{id}")

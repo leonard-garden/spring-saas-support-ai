@@ -1,0 +1,17 @@
+{
+  "agents": [
+    {
+      "agent_id": "a76d6f707bc9eb9f5",
+      "agent_type": "harness-optimizer",
+      "started_at": "2026-05-10T07:15:44.676Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-10T07:17:15.629Z",
+      "duration_ms": 90953
+    }
+  ],
+  "total_spawned": 1,
+  "total_completed": 1,
+  "total_failed": 0,
+  "last_updated": "2026-05-10T08:30:40.532Z"
+}

@@ -3,10 +3,11 @@ package com.leonardtrinh.supportsaas.member;
 import com.leonardtrinh.supportsaas.auth.JwtClaims;
 import com.leonardtrinh.supportsaas.auth.JwtService;
 import com.leonardtrinh.supportsaas.tenant.TenantContext;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -22,10 +23,9 @@ public class MemberServiceImpl implements MemberService {
     }
 
     @Override
-    public List<MemberResponse> listAll() {
-        return memberRepository.findAll().stream()
-                .map(this::toResponse)
-                .toList();
+    public Page<MemberResponse> listAll(Pageable pageable) {
+        return memberRepository.findAll(pageable)
+                .map(this::toResponse);
     }
 
     @Override

@@ -35,9 +35,15 @@ Read: `CLAUDE.md`, `.claude/memory/architecture.md`, `.claude/memory/multi-tenan
 
 ## Step 2 — Branch
 
+Read `.planning/sdlc-state.md` to get `phase_branch`. If present, branch off it:
+
 ```bash
+git checkout <phase_branch>
+git pull origin <phase_branch>
 git checkout -b feature/issue-{N}-{slug}
 ```
+
+If `phase_branch` is not set, branch off `develop` as default.
 
 ---
 
@@ -119,8 +125,10 @@ Load `assets/commit-template.txt`. Fill all trailers. Do not leave any blank.
 
 Load `assets/pr-template.md`. Fill Summary + Test plan with actual numbers from Step 5.
 
+Target branch = `phase_branch` from `.planning/sdlc-state.md`. If not set, target `develop`.
+
 ```bash
-gh pr create --title "..." --body "$(cat <<'EOF'
+gh pr create --title "..." --base <phase_branch> --body "$(cat <<'EOF'
 [filled template]
 EOF
 )"
