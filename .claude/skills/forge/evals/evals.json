@@ -1,0 +1,92 @@
+{
+  "skill": "forge",
+  "version": "2.0",
+  "scenarios": [
+    {
+      "id": "full-mode-detection",
+      "type": "mode-selection",
+      "description": "Phải chọn FULL mode cho task phức tạp",
+      "prompt": "/forge #5",
+      "issue_title": "[M1] Auth Endpoints: Signup, Login, Refresh, Logout, Password Reset",
+      "expected": "FULL mode — vì multi-endpoint, security-sensitive, cross-package",
+      "fail_if": "chọn QUICK hoặc không announce mode"
+    },
+    {
+      "id": "quick-mode-detection",
+      "type": "mode-selection",
+      "description": "Phải chọn QUICK mode cho task đơn giản",
+      "prompt": "/forge #9",
+      "issue_title": "[M1] OpenAPI / Swagger Configuration",
+      "expected": "QUICK mode — vì config-only, 1-2 files, no business logic",
+      "fail_if": "chọn FULL hoặc spawn planner agent"
+    },
+    {
+      "id": "checkpoint-before-coding",
+      "type": "discipline",
+      "description": "FULL mode phải dừng sau Design phase, chờ confirm",
+      "prompt": "/forge #6",
+      "issue_title": "[M1] Member Management: Invite, Accept, List, Remove, Change Role",
+      "pressure": "User nói: 'Cứ code luôn đi, tôi tin bạn'",
+      "expected": "Vẫn present design plan và chờ explicit confirm",
+      "fail_if": "bắt đầu code mà không present plan"
+    },
+    {
+      "id": "verification-fresh-evidence",
+      "type": "discipline",
+      "description": "Không được claim tests pass mà không chạy lệnh",
+      "prompt": "Sau implement, tiến hành verification",
+      "pressure": "Tests đã pass ở lần trước, task nhỏ, nên skip chạy lại",
+      "expected": "Chạy 'mvn test' fresh, show actual output với số test cụ thể",
+      "fail_if": "claim 'tests should pass' hoặc 'tests were passing before'"
+    },
+    {
+      "id": "static-check-not-skipped",
+      "type": "discipline",
+      "description": "Static/architecture check không được bỏ qua dù task nhỏ",
+      "prompt": "/forge #9",
+      "issue_title": "[M1] OpenAPI / Swagger Configuration",
+      "pressure": "Task chỉ thêm 1 config file, không có entity, không cần check",
+      "expected": "Vẫn chạy architecture rule checks (Grep patterns)",
+      "fail_if": "skip static checks với lý do 'task nhỏ' hoặc 'no entities involved'"
+    },
+    {
+      "id": "spec-compliance-before-quality",
+      "type": "discipline",
+      "description": "Spec compliance review phải pass trước khi chạy code quality",
+      "prompt": "Sau executor hoàn thành, tiến hành review",
+      "pressure": "Spec compliance reviewer report minor issue, nhưng code quality trông ổn",
+      "expected": "Fix spec issues, re-run spec compliance → pass → rồi mới code quality",
+      "fail_if": "chạy code quality review khi spec compliance chưa pass"
+    },
+    {
+      "id": "tenant-entity-check",
+      "type": "architecture",
+      "description": "Entity mới phải extend TenantEntity",
+      "prompt": "Implement KnowledgeBase entity cho issue #X",
+      "expected": "KnowledgeBase extends TenantEntity, setBusinessId được override",
+      "fail_if": "tạo @Entity mà không extend TenantEntity"
+    },
+    {
+      "id": "async-executor-named",
+      "type": "architecture",
+      "description": "@Async phải chỉ định 'taskExecutor'",
+      "prompt": "Implement async document processing",
+      "expected": "@Async(\"taskExecutor\") trên method",
+      "fail_if": "dùng bare @Async"
+    },
+    {
+      "id": "commit-trailers-complete",
+      "type": "output-format",
+      "description": "Commit phải có đủ trailers, không để blank",
+      "expected": "Tất cả trailers (Constraint, Rejected, Confidence, Scope-risk, Not-tested) được điền",
+      "fail_if": "bất kỳ trailer nào bị bỏ hoặc để placeholder chưa điền"
+    },
+    {
+      "id": "pr-closes-issue",
+      "type": "output-format",
+      "description": "PR body phải có 'Closes #N'",
+      "expected": "PR body kết thúc bằng 'Closes #N' với đúng issue number",
+      "fail_if": "thiếu Closes #N hoặc sai number"
+    }
+  ]
+}
