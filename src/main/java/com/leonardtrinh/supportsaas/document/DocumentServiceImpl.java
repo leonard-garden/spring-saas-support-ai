@@ -1,7 +1,6 @@
 package com.leonardtrinh.supportsaas.document;
 
 import com.leonardtrinh.supportsaas.knowledgebase.KnowledgeBase;
-import com.leonardtrinh.supportsaas.knowledgebase.KnowledgeBaseNotFoundException;
 import com.leonardtrinh.supportsaas.knowledgebase.KnowledgeBaseRepository;
 import com.leonardtrinh.supportsaas.storage.MinioService;
 import com.leonardtrinh.supportsaas.tenant.TenantContext;
@@ -43,7 +42,11 @@ public class DocumentServiceImpl implements DocumentService {
 
         UUID tenantId = TenantContext.getTenantId();
         KnowledgeBase kb = knowledgeBaseRepository.findByBusinessId(tenantId)
-                .orElseThrow(KnowledgeBaseNotFoundException::new);
+                .orElseGet(() -> {
+                    KnowledgeBase newKb = new KnowledgeBase();
+                    newKb.setBusinessId(tenantId);
+                    return knowledgeBaseRepository.save(newKb);
+                });
 
         UUID documentId = UUID.randomUUID();
         String objectKey = tenantId + "/" + documentId + "/" + sanitizeFilename(file.getOriginalFilename());
