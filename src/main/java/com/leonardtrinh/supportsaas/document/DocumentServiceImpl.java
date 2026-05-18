@@ -76,8 +76,8 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public List<DocumentResponse> listAll(DocumentStatus status) {
         UUID tenantId = TenantContext.getTenantId();
-        KnowledgeBase kb = knowledgeBaseRepository.findByBusinessId(tenantId)
-                .orElseThrow(KnowledgeBaseNotFoundException::new);
+        KnowledgeBase kb = knowledgeBaseRepository.findByBusinessId(tenantId).orElse(null);
+        if (kb == null) return List.of();
         List<Document> docs = (status != null)
                 ? documentRepository.findAllByKnowledgeBaseIdAndStatusOrderByCreatedAtDesc(kb.getId(), status)
                 : documentRepository.findAllByKnowledgeBaseIdOrderByCreatedAtDesc(kb.getId());
