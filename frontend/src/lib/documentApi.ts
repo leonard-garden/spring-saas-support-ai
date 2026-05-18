@@ -18,10 +18,15 @@ export function validateFile(file: File): { ok: true } | { ok: false; error: str
   return { ok: true }
 }
 
+interface DocumentListResponse {
+  documents: DocumentResponse[]
+  total: number
+}
+
 export async function listDocuments(): Promise<DocumentResponse[]> {
-  const { data: envelope } = await api.get<ApiResponse<DocumentResponse[]>>("/kb/documents")
+  const { data: envelope } = await api.get<ApiResponse<DocumentListResponse>>("/kb/documents")
   if (!envelope.data) throw new Error(envelope.error ?? "Empty response")
-  return envelope.data
+  return envelope.data.documents
 }
 
 export async function getDocument(id: string): Promise<DocumentResponse> {
