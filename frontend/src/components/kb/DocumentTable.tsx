@@ -86,9 +86,9 @@ const DocumentRow = ({
   return (
     <>
       <TableRow className={cn(isFailed && "bg-red-50")}>
-        <TableCell className="font-medium text-stone-800">{effectiveDoc.fileName}</TableCell>
-        <TableCell className="text-stone-600">{effectiveDoc.fileType}</TableCell>
-        <TableCell className="text-stone-600">{formatFileSize(effectiveDoc.fileSize)}</TableCell>
+        <TableCell className="font-medium text-stone-800">{effectiveDoc.filename}</TableCell>
+        <TableCell className="text-stone-600">{effectiveDoc.contentType}</TableCell>
+        <TableCell className="text-stone-600">{formatFileSize(effectiveDoc.sizeBytes)}</TableCell>
         <TableCell className="text-stone-600">
           {effectiveDoc.chunkCount !== null ? effectiveDoc.chunkCount : "—"}
         </TableCell>

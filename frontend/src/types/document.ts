@@ -2,9 +2,9 @@ export type DocumentStatus = "PENDING" | "PROCESSING" | "READY" | "FAILED"
 
 export interface DocumentResponse {
   id: string
-  fileName: string
-  fileType: string
-  fileSize: number
+  filename: string
+  contentType: string
+  sizeBytes: number
   chunkCount: number | null
   status: DocumentStatus
   errorMessage: string | null
