@@ -1,7 +1,7 @@
 package com.leonardtrinh.supportsaas.document;
 
+import com.leonardtrinh.supportsaas.document.chunk.DocumentChunkRepository;
 import com.leonardtrinh.supportsaas.document.ingestion.*;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -22,7 +22,7 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
     private final ContentHashFilter contentHashFilter;
     private final VectorStorage vectorStorage;
     private final FullTextStorage fullTextStorage;
-    private final JdbcTemplate jdbcTemplate;
+    private final DocumentChunkRepository chunkRepository;
 
     public DocumentProcessingServiceImpl(DocumentRepository documentRepository,
                                          com.leonardtrinh.supportsaas.storage.MinioService minioService,
@@ -31,7 +31,7 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
                                          ContentHashFilter contentHashFilter,
                                          VectorStorage vectorStorage,
                                          FullTextStorage fullTextStorage,
-                                         JdbcTemplate jdbcTemplate) {
+                                         DocumentChunkRepository chunkRepository) {
         this.documentRepository = documentRepository;
         this.minioService = minioService;
         this.ingestionRouter = ingestionRouter;
@@ -39,7 +39,7 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
         this.contentHashFilter = contentHashFilter;
         this.vectorStorage = vectorStorage;
         this.fullTextStorage = fullTextStorage;
-        this.jdbcTemplate = jdbcTemplate;
+        this.chunkRepository = chunkRepository;
     }
 
     @Override
@@ -81,7 +81,7 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
                 return;
             }
             try {
-                jdbcTemplate.update("DELETE FROM document_chunks WHERE document_id = ?::uuid", documentId.toString());
+                chunkRepository.deleteByDocumentId(documentId.toString());
             } catch (Exception cleanupEx) {
                 // best-effort cleanup, don't override original exception
             }

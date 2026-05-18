@@ -1,24 +1,22 @@
 package com.leonardtrinh.supportsaas.document.ingestion;
 
+import com.leonardtrinh.supportsaas.document.chunk.DocumentChunkRepository;
 import com.leonardtrinh.supportsaas.tenant.TenantContext;
 import org.springframework.ai.embedding.EmbeddingModel;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.StringJoiner;
 import java.util.UUID;
 
-// Directive: Chunk writes bypass JPA intentionally — pgvector requires ?::vector cast not
-// supported by Hibernate. businessId is validated against TenantContext before INSERT.
 @Component
 public class VectorStorage {
 
     private final EmbeddingModel embeddingModel;
-    private final JdbcTemplate jdbcTemplate;
+    private final DocumentChunkRepository chunkRepository;
 
-    public VectorStorage(EmbeddingModel embeddingModel, JdbcTemplate jdbcTemplate) {
+    public VectorStorage(EmbeddingModel embeddingModel, DocumentChunkRepository chunkRepository) {
         this.embeddingModel = embeddingModel;
-        this.jdbcTemplate = jdbcTemplate;
+        this.chunkRepository = chunkRepository;
     }
 
     public UUID store(String content, String contentHash, UUID documentId, UUID businessId, int chunkIndex) {
@@ -27,18 +25,16 @@ public class VectorStorage {
             throw new IllegalStateException("businessId mismatch: expected " + currentTenant + " but got " + businessId);
         }
         float[] vector = embeddingModel.embed(content);
-        String pgVector = toVectorString(vector);
+        String vectorString = toVectorString(vector);
         UUID chunkId = UUID.randomUUID();
-        jdbcTemplate.update(
-                "INSERT INTO document_chunks (id, business_id, document_id, chunk_index, content, content_hash, embedding) " +
-                "VALUES (?::uuid, ?::uuid, ?::uuid, ?, ?, ?, ?::vector)",
+        chunkRepository.insertChunk(
                 chunkId.toString(),
                 businessId.toString(),
                 documentId.toString(),
                 chunkIndex,
                 content,
                 contentHash,
-                pgVector
+                vectorString
         );
         return chunkId;
     }

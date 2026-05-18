@@ -1,23 +1,14 @@
 package com.leonardtrinh.supportsaas.document.ingestion;
 
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
+// tsv is populated at INSERT time via to_tsvector in DocumentChunkRepository.insertChunk
 @Component
 public class FullTextStorage {
 
-    private final JdbcTemplate jdbcTemplate;
-
-    public FullTextStorage(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
-    }
-
     public void updateTsv(UUID chunkId) {
-        jdbcTemplate.update(
-                "UPDATE document_chunks SET tsv = to_tsvector('english', content) WHERE id = ?::uuid",
-                chunkId.toString()
-        );
+        // no-op: tsv column is already populated during INSERT in VectorStorage
     }
 }
