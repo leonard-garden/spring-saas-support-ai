@@ -1,7 +1,6 @@
 package com.leonardtrinh.supportsaas.document;
 
 import com.leonardtrinh.supportsaas.knowledgebase.KnowledgeBase;
-import com.leonardtrinh.supportsaas.knowledgebase.KnowledgeBaseNotFoundException;
 import com.leonardtrinh.supportsaas.knowledgebase.KnowledgeBaseRepository;
 import com.leonardtrinh.supportsaas.storage.MinioService;
 import com.leonardtrinh.supportsaas.tenant.TenantContext;
@@ -43,7 +42,11 @@ public class DocumentServiceImpl implements DocumentService {
 
         UUID tenantId = TenantContext.getTenantId();
         KnowledgeBase kb = knowledgeBaseRepository.findByBusinessId(tenantId)
-                .orElseThrow(KnowledgeBaseNotFoundException::new);
+                .orElseGet(() -> {
+                    KnowledgeBase newKb = new KnowledgeBase();
+                    newKb.setBusinessId(tenantId);
+                    return knowledgeBaseRepository.save(newKb);
+                });
 
         UUID documentId = UUID.randomUUID();
         String objectKey = tenantId + "/" + documentId + "/" + sanitizeFilename(file.getOriginalFilename());
@@ -76,8 +79,8 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public List<DocumentResponse> listAll(DocumentStatus status) {
         UUID tenantId = TenantContext.getTenantId();
-        KnowledgeBase kb = knowledgeBaseRepository.findByBusinessId(tenantId)
-                .orElseThrow(KnowledgeBaseNotFoundException::new);
+        KnowledgeBase kb = knowledgeBaseRepository.findByBusinessId(tenantId).orElse(null);
+        if (kb == null) return List.of();
         List<Document> docs = (status != null)
                 ? documentRepository.findAllByKnowledgeBaseIdAndStatusOrderByCreatedAtDesc(kb.getId(), status)
                 : documentRepository.findAllByKnowledgeBaseIdOrderByCreatedAtDesc(kb.getId());
