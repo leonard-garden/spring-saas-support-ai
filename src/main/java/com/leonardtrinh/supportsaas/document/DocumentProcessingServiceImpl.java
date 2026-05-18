@@ -21,7 +21,6 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
     private final ChunkTextSplitter chunkTextSplitter;
     private final ContentHashFilter contentHashFilter;
     private final VectorStorage vectorStorage;
-    private final FullTextStorage fullTextStorage;
     private final DocumentChunkRepository chunkRepository;
 
     public DocumentProcessingServiceImpl(DocumentRepository documentRepository,
@@ -30,7 +29,6 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
                                          ChunkTextSplitter chunkTextSplitter,
                                          ContentHashFilter contentHashFilter,
                                          VectorStorage vectorStorage,
-                                         FullTextStorage fullTextStorage,
                                          DocumentChunkRepository chunkRepository) {
         this.documentRepository = documentRepository;
         this.minioService = minioService;
@@ -38,7 +36,6 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
         this.chunkTextSplitter = chunkTextSplitter;
         this.contentHashFilter = contentHashFilter;
         this.vectorStorage = vectorStorage;
-        this.fullTextStorage = fullTextStorage;
         this.chunkRepository = chunkRepository;
     }
 
@@ -64,8 +61,7 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
                 if (!contentHashFilter.isNew(documentId, hash)) {
                     continue;
                 }
-                UUID chunkId = vectorStorage.store(chunk, hash, documentId, businessId, i);
-                fullTextStorage.updateTsv(chunkId);
+                vectorStorage.store(chunk, hash, documentId, businessId, i);
                 savedCount++;
             }
 

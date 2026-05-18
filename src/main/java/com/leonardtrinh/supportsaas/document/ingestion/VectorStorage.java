@@ -19,16 +19,15 @@ public class VectorStorage {
         this.chunkRepository = chunkRepository;
     }
 
-    public UUID store(String content, String contentHash, UUID documentId, UUID businessId, int chunkIndex) {
+    public void store(String content, String contentHash, UUID documentId, UUID businessId, int chunkIndex) {
         UUID currentTenant = TenantContext.getTenantId();
         if (!businessId.equals(currentTenant)) {
             throw new IllegalStateException("businessId mismatch: expected " + currentTenant + " but got " + businessId);
         }
         float[] vector = embeddingModel.embed(content);
         String vectorString = toVectorString(vector);
-        UUID chunkId = UUID.randomUUID();
         chunkRepository.insertChunk(
-                chunkId.toString(),
+                UUID.randomUUID().toString(),
                 businessId.toString(),
                 documentId.toString(),
                 chunkIndex,
@@ -36,7 +35,6 @@ public class VectorStorage {
                 contentHash,
                 vectorString
         );
-        return chunkId;
     }
 
     private String toVectorString(float[] vector) {
