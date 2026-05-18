@@ -12,6 +12,7 @@ import { Loader2, FileText, Trash2, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { DocumentResponse, DocumentStatus } from "@/types/document"
 import { useStatusPoller } from "@/hooks/useStatusPoller"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface DocumentTableProps {
   documents: DocumentResponse[]
@@ -154,7 +155,19 @@ const DocumentRow = ({
       {isFailed && effectiveDoc.errorMessage && (
         <TableRow className="bg-red-50 hover:bg-red-50">
           <TableCell colSpan={7} className="py-1 text-xs text-red-600">
-            <span className="font-medium">Error:</span> {effectiveDoc.errorMessage}
+            <span className="font-medium">Error:</span>{" "}
+            {effectiveDoc.errorMessage.length > 120 ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help">{effectiveDoc.errorMessage.slice(0, 120)}…</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-sm break-words">{effectiveDoc.errorMessage}</p>
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              effectiveDoc.errorMessage
+            )}
           </TableCell>
         </TableRow>
       )}

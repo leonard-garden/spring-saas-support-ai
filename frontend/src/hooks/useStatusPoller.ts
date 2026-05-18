@@ -6,14 +6,14 @@ import { DOCUMENTS_QUERY_KEY } from "./useDocuments"
 
 export function useStatusPoller(docId: string, currentStatus: DocumentStatus): DocumentResponse | null {
   const queryClient = useQueryClient()
-  const isProcessing = currentStatus === "PROCESSING"
+  const shouldPoll = currentStatus === "PROCESSING" || currentStatus === "PENDING"
   const prevStatusRef = useRef<string | undefined>(undefined)
 
   const { data } = useQuery({
     queryKey: ["document", docId],
     queryFn: () => getDocument(docId),
-    refetchInterval: isProcessing ? 3000 : false,
-    enabled: isProcessing,
+    refetchInterval: shouldPoll ? 3000 : false,
+    enabled: shouldPoll,
     gcTime: 0,
   })
 
@@ -22,10 +22,11 @@ export function useStatusPoller(docId: string, currentStatus: DocumentStatus): D
     const prev = prevStatusRef.current
     prevStatusRef.current = newStatus
 
-    if (prev === "PROCESSING" && (newStatus === "READY" || newStatus === "FAILED")) {
+    const wasInFlight = prev === "PROCESSING" || prev === "PENDING"
+    if (wasInFlight && (newStatus === "READY" || newStatus === "FAILED")) {
       queryClient.invalidateQueries({ queryKey: DOCUMENTS_QUERY_KEY })
     }
   }, [data?.status, queryClient])
 
-  return isProcessing ? (data ?? null) : null
+  return shouldPoll ? (data ?? null) : null
 }
