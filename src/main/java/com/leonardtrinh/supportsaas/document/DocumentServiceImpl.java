@@ -26,13 +26,16 @@ public class DocumentServiceImpl implements DocumentService {
     private final DocumentRepository documentRepository;
     private final KnowledgeBaseRepository knowledgeBaseRepository;
     private final MinioService minioService;
+    private final DocumentProcessingService processingService;
 
     public DocumentServiceImpl(DocumentRepository documentRepository,
                                 KnowledgeBaseRepository knowledgeBaseRepository,
-                                MinioService minioService) {
+                                MinioService minioService,
+                                DocumentProcessingService processingService) {
         this.documentRepository = documentRepository;
         this.knowledgeBaseRepository = knowledgeBaseRepository;
         this.minioService = minioService;
+        this.processingService = processingService;
     }
 
     @Override
@@ -72,6 +75,8 @@ public class DocumentServiceImpl implements DocumentService {
             }
             throw dbEx;
         }
+
+        processingService.processAsync(doc.getId(), tenantId);
 
         return toResponse(doc);
     }
