@@ -42,6 +42,7 @@ export async function uploadDocument(
   const formData = new FormData()
   formData.append("file", file)
   const { data: envelope } = await api.post<ApiResponse<DocumentResponse>>("/kb/documents", formData, {
+    headers: { "Content-Type": undefined },
     onUploadProgress: (e) => {
       const total = e.total ?? 0
       const pct = total > 0 ? Math.round((e.loaded / total) * 100) : 0

@@ -142,7 +142,7 @@ export function UploadModal({ open, onOpenChange }: UploadModalProps) {
         <div className="space-y-4">
           <FileDropzone onFile={handleFile} />
 
-          {file && phase === "idle" && (
+          {file && phase !== "uploading" && (
             <p className="text-sm text-stone-600 truncate">
               Selected: <span className="font-medium">{file.name}</span>
             </p>
