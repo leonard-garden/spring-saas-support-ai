@@ -3,6 +3,7 @@ package com.leonardtrinh.supportsaas.storage;
 import io.minio.*;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
@@ -13,14 +14,21 @@ public class MinioServiceImpl implements MinioService {
 
     private final MinioClient minioClient;
     private final MinioProperties props;
+    private final boolean initOnStartup;
 
-    public MinioServiceImpl(MinioClient minioClient, MinioProperties props) {
+    public MinioServiceImpl(MinioClient minioClient, MinioProperties props,
+                            @Value("${minio.init-on-startup:true}") boolean initOnStartup) {
         this.minioClient = minioClient;
         this.props = props;
+        this.initOnStartup = initOnStartup;
     }
 
     @PostConstruct
     void ensureBucketExists() {
+        if (!initOnStartup) {
+            log.info("MinIO bucket init skipped (minio.init-on-startup=false)");
+            return;
+        }
         try {
             boolean exists = minioClient.bucketExists(BucketExistsArgs.builder().bucket(props.bucket()).build());
             if (!exists) {
