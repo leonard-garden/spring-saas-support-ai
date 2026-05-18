@@ -58,6 +58,16 @@ const formatFileSize = (bytes: number): string => {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
+const formatContentType = (contentType: string): string => {
+  const map: Record<string, string> = {
+    "application/pdf": "PDF",
+    "text/plain": "TXT",
+    "text/markdown": "MD",
+    "text/x-markdown": "MD",
+  }
+  return map[contentType] ?? contentType.split("/").pop()?.toUpperCase() ?? contentType
+}
+
 const DocumentRow = ({
   doc,
   isAdmin,
@@ -87,7 +97,7 @@ const DocumentRow = ({
     <>
       <TableRow className={cn(isFailed && "bg-red-50")}>
         <TableCell className="font-medium text-stone-800">{effectiveDoc.filename}</TableCell>
-        <TableCell className="text-stone-600">{effectiveDoc.contentType}</TableCell>
+        <TableCell className="text-stone-600">{formatContentType(effectiveDoc.contentType)}</TableCell>
         <TableCell className="text-stone-600">{formatFileSize(effectiveDoc.sizeBytes)}</TableCell>
         <TableCell className="text-stone-600">
           {effectiveDoc.chunkCount !== null ? effectiveDoc.chunkCount : "—"}
@@ -175,7 +185,7 @@ export const DocumentTable = ({ documents, isAdmin, onDelete, deletingId }: Docu
         <TableHead>Chunks</TableHead>
         <TableHead>Status</TableHead>
         <TableHead>Uploaded</TableHead>
-        <TableHead className="w-24">Actions</TableHead>
+        <TableHead className="w-36">Actions</TableHead>
       </TableRow>
     </TableHeader>
     <TableBody>
