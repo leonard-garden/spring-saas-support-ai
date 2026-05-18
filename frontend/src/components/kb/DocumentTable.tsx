@@ -127,29 +127,24 @@ const DocumentRow = ({
                   <Trash2 className="h-4 w-4" />
                 </Button>
               ) : (
-                <div className="flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="text-xs text-stone-500">Delete?</span>
+                <div className="flex items-center gap-2 whitespace-nowrap">
                   <Button
                     size="sm"
-                    variant="destructive"
-                    className="h-6 px-2.5 text-xs"
                     disabled={isDeleting}
+                    className="h-7 px-3 text-xs font-medium bg-red-600 hover:bg-red-700 text-white"
                     onClick={() => {
                       setConfirmState("idle")
                       onDelete(doc.id)
                     }}
                   >
-                    Confirm
+                    Delete
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 w-6 p-0 text-stone-400 hover:text-stone-700"
+                  <button
+                    className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
                     onClick={() => setConfirmState("idle")}
-                    aria-label="Cancel delete"
                   >
-                    ✕
-                  </Button>
+                    cancel
+                  </button>
                 </div>
               )}
             </>
