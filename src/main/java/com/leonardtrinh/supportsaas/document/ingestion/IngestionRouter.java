@@ -4,23 +4,22 @@ import com.leonardtrinh.supportsaas.document.DocumentProcessingException;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
+import java.util.List;
 
 @Component
 public class IngestionRouter {
 
-    private final PdfIngester pdfIngester;
-    private final TextIngester textIngester;
+    private final List<DocumentIngester> ingesters;
 
-    public IngestionRouter(PdfIngester pdfIngester, TextIngester textIngester) {
-        this.pdfIngester = pdfIngester;
-        this.textIngester = textIngester;
+    public IngestionRouter(List<DocumentIngester> ingesters) {
+        this.ingesters = ingesters;
     }
 
     public String route(String contentType, InputStream stream) throws DocumentProcessingException {
-        return switch (contentType) {
-            case "application/pdf" -> pdfIngester.read(stream);
-            case "text/plain", "text/markdown" -> textIngester.read(stream);
-            default -> throw new DocumentProcessingException("Unsupported content type: " + contentType);
-        };
+        return ingesters.stream()
+                .filter(i -> i.supports(contentType))
+                .findFirst()
+                .orElseThrow(() -> new DocumentProcessingException("Unsupported content type: " + contentType))
+                .read(stream);
     }
 }

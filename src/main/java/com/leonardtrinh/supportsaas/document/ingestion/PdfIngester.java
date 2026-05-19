@@ -14,6 +14,11 @@ import java.io.InputStream;
 public class PdfIngester implements DocumentIngester {
 
     @Override
+    public boolean supports(String contentType) {
+        return "application/pdf".equals(contentType);
+    }
+
+    @Override
     public String read(InputStream stream) throws DocumentProcessingException {
         try {
             byte[] bytes = stream.readAllBytes();

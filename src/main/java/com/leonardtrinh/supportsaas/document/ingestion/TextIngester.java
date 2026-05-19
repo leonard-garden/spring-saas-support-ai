@@ -11,6 +11,11 @@ import java.nio.charset.StandardCharsets;
 public class TextIngester implements DocumentIngester {
 
     @Override
+    public boolean supports(String contentType) {
+        return "text/plain".equals(contentType) || "text/markdown".equals(contentType);
+    }
+
+    @Override
     public String read(InputStream stream) throws DocumentProcessingException {
         try {
             return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
