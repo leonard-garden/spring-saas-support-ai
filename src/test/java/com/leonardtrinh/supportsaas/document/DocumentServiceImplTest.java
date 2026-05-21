@@ -38,6 +38,9 @@ class DocumentServiceImplTest {
     @Mock
     private MinioService minioService;
 
+    @Mock
+    private DocumentProcessingService processingService;
+
     private DocumentServiceImpl documentService;
 
     private static final UUID TENANT_ID = UUID.randomUUID();
@@ -45,7 +48,7 @@ class DocumentServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        documentService = new DocumentServiceImpl(documentRepository, knowledgeBaseRepository, minioService);
+        documentService = new DocumentServiceImpl(documentRepository, knowledgeBaseRepository, minioService, processingService);
     }
 
     // --- helpers ---

@@ -2,8 +2,10 @@ package com.leonardtrinh.supportsaas.common;
 
 import com.leonardtrinh.supportsaas.auth.AuthResponse;
 import com.leonardtrinh.supportsaas.auth.SignupRequest;
+import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -21,6 +23,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 public abstract class BaseIT {
+
+    @MockBean
+    protected EmbeddingModel embeddingModel;
 
     @Autowired
     protected TestRestTemplate restTemplate;

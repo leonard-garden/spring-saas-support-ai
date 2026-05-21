@@ -1,4 +1,10 @@
 spring:
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:dev-placeholder}
+      embedding:
+        options:
+          model: text-embedding-3-small
   datasource:
     url: jdbc:postgresql://localhost:5432/supportsaas
     username: supportsaas

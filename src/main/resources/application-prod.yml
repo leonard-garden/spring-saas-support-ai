@@ -1,4 +1,10 @@
 spring:
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      embedding:
+        options:
+          model: text-embedding-3-small
   datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
