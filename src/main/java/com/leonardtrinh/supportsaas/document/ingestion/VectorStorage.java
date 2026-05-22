@@ -5,6 +5,7 @@ import com.leonardtrinh.supportsaas.tenant.TenantContext;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.StringJoiner;
 import java.util.UUID;
 
@@ -35,6 +36,12 @@ public class VectorStorage {
                 contentHash,
                 vectorString
         );
+    }
+
+    public List<Object[]> search(String query, UUID businessId, int topK) {
+        float[] vector = embeddingModel.embed(query);
+        String vectorString = toVectorString(vector);
+        return chunkRepository.vectorSearch(vectorString, businessId.toString(), topK);
     }
 
     private String toVectorString(float[] vector) {
