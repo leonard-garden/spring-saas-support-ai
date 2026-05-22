@@ -6,6 +6,8 @@ import com.leonardtrinh.supportsaas.storage.MinioService;
 import com.leonardtrinh.supportsaas.tenant.TenantContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -76,7 +78,17 @@ public class DocumentServiceImpl implements DocumentService {
             throw dbEx;
         }
 
-        processingService.processAsync(doc.getId(), tenantId);
+        UUID docId = doc.getId();
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    processingService.processAsync(docId, tenantId);
+                }
+            });
+        } else {
+            processingService.processAsync(docId, tenantId);
+        }
 
         return toResponse(doc);
     }

@@ -11,4 +11,5 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
     long countByKnowledgeBaseId(UUID knowledgeBaseId);
     long countByKnowledgeBaseIdAndStatus(UUID knowledgeBaseId, DocumentStatus status);
     Optional<Document> findByIdAndBusinessId(UUID id, UUID businessId);
+    boolean existsByStatus(DocumentStatus status);
 }

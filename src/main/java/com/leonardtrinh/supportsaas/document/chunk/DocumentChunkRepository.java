@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface DocumentChunkRepository extends JpaRepository<DocumentChunk, UUID> {
@@ -30,4 +31,37 @@ public interface DocumentChunkRepository extends JpaRepository<DocumentChunk, UU
     @Modifying
     @Query(value = "DELETE FROM document_chunks WHERE document_id = CAST(:documentId AS uuid)", nativeQuery = true)
     void deleteByDocumentId(@Param("documentId") String documentId);
+
+    @Query(value = """
+            SELECT dc.id::text, dc.document_id::text, dc.chunk_index, dc.content,
+                   (1 - (dc.embedding <=> CAST(:embedding AS vector)))::float AS score,
+                   d.filename AS document_name
+            FROM document_chunks dc
+            JOIN documents d ON dc.document_id = d.id
+            WHERE dc.business_id = CAST(:businessId AS uuid)
+            ORDER BY dc.embedding <=> CAST(:embedding AS vector)
+            LIMIT :topK
+            """, nativeQuery = true)
+    List<Object[]> vectorSearch(
+            @Param("embedding") String embedding,
+            @Param("businessId") String businessId,
+            @Param("topK") int topK
+    );
+
+    @Query(value = """
+            SELECT dc.id::text, dc.document_id::text, dc.chunk_index, dc.content,
+                   ts_rank(dc.tsv, plainto_tsquery('english', :query))::float AS score,
+                   d.filename AS document_name
+            FROM document_chunks dc
+            JOIN documents d ON dc.document_id = d.id
+            WHERE dc.business_id = CAST(:businessId AS uuid)
+              AND dc.tsv @@ plainto_tsquery('english', :query)
+            ORDER BY score DESC
+            LIMIT :topK
+            """, nativeQuery = true)
+    List<Object[]> ftsSearch(
+            @Param("query") String query,
+            @Param("businessId") String businessId,
+            @Param("topK") int topK
+    );
 }
