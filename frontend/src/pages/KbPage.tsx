@@ -3,6 +3,7 @@ import { useAuthStore } from "@/store/authStore"
 import { useDocuments, useDeleteDocument } from "@/hooks/useDocuments"
 import { DocumentTable, EmptyState } from "@/components/kb/DocumentTable"
 import { UploadModal } from "@/components/kb/UploadModal"
+import { SearchSection } from "@/components/kb/SearchSection"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Upload } from "lucide-react"
@@ -13,6 +14,7 @@ export function KbPage() {
   const [uploadOpen, setUploadOpen] = useState(false)
   const { data: documents = [], isLoading, isError } = useDocuments()
   const deleteMutation = useDeleteDocument()
+  const readyCount = documents.filter((d) => d.status === "READY").length
 
   return (
     <div className="space-y-6">
@@ -56,6 +58,8 @@ export function KbPage() {
           )}
         </CardContent>
       </Card>
+
+      <SearchSection readyCount={readyCount} />
 
       <UploadModal open={uploadOpen} onOpenChange={setUploadOpen} />
     </div>
