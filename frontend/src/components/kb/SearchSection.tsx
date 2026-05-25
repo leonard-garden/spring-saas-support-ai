@@ -6,11 +6,13 @@ import { Search } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { SearchResult } from "@/types/search"
 
+const HIGH_SCORE_THRESHOLD = 0.7
+
 const ScoreBadge = ({ score }: { score: number }) => (
   <span
     className={cn(
       "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium tabular-nums",
-      score >= 0.7
+      score >= HIGH_SCORE_THRESHOLD
         ? "bg-green-100 text-green-700"
         : "bg-amber-100 text-amber-700"
     )}
@@ -41,11 +43,12 @@ interface SearchSectionProps {
 
 export function SearchSection({ readyCount }: SearchSectionProps) {
   const [query, setQuery] = useState("")
-  const { mutate: search, data: results, isPending, isSuccess } = useSearch()
+  const { mutate: search, data: results, isPending, isSuccess, isError } = useSearch()
 
   if (readyCount === 0) return null
 
   const handleSearch = () => {
+    if (isPending) return
     const trimmed = query.trim()
     if (!trimmed) return
     search(trimmed)
@@ -81,7 +84,11 @@ export function SearchSection({ readyCount }: SearchSectionProps) {
         </Button>
       </div>
 
-      {isSuccess && (
+      {isError && (
+        <p className="text-sm text-red-500">Search failed. Please try again.</p>
+      )}
+
+      {isSuccess && !isPending && (
         <div className="space-y-2">
           {results && results.length > 0 ? (
             results.map((r) => <SearchResultItem key={r.chunkId} result={r} />)
