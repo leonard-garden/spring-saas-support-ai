@@ -43,4 +43,9 @@ public class DocumentController {
         documentService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/retry")
+    public ResponseEntity<ApiResponse<DocumentResponse>> retry(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.ok(documentService.retry(id)));
+    }
 }
