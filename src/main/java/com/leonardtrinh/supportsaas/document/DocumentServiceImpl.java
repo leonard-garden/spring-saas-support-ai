@@ -136,7 +136,7 @@ public class DocumentServiceImpl implements DocumentService {
         Document doc = documentRepository.findByIdAndBusinessId(id, tenantId)
                 .orElseThrow(() -> new DocumentNotFoundException(id));
         if (doc.getStatus() != DocumentStatus.FAILED) {
-            throw new DocumentNotRetryableException(id, doc.getStatus());
+            throw new DocumentNotRetryableException();
         }
         chunkRepository.deleteByDocumentId(doc.getId().toString());
         doc.setStatus(DocumentStatus.PENDING);
