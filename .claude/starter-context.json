@@ -1,0 +1,78 @@
+{
+  "version": "1.0",
+  "tier": "standard",
+  "stack": {
+    "language": "Java 21",
+    "framework": "Spring Boot 3.3",
+    "build_tool": "Maven",
+    "test_framework": "JUnit 5 + Testcontainers",
+    "package_manager": "Maven",
+    "detected_tools": ["docker-compose"]
+  },
+  "project": {
+    "name": "spring-saas-support-ai",
+    "type": "api",
+    "team_size": 1,
+    "stage": "active"
+  },
+  "architecture": {
+    "style": "modular-monolith",
+    "key_layers": [
+      { "name": "API", "dir": "src/main/java/com/leonardtrinh/supportsaas/*/", "responsibility": "Controllers — REST endpoints, request/response mapping" },
+      { "name": "Service", "dir": "src/main/java/com/leonardtrinh/supportsaas/*/", "responsibility": "Business logic, tenant-aware operations" },
+      { "name": "Repository", "dir": "src/main/java/com/leonardtrinh/supportsaas/*/", "responsibility": "JPA repositories with Hibernate tenant filter" },
+      { "name": "Entity", "dir": "src/main/java/com/leonardtrinh/supportsaas/*/", "responsibility": "JPA entities extending TenantEntity" }
+    ],
+    "entry_points": [
+      "src/main/java/com/leonardtrinh/supportsaas/SupportSaasApplication.java"
+    ],
+    "external_deps": [
+      { "service": "PostgreSQL 16 + PgVector", "purpose": "Primary DB + vector store for RAG", "env_var": "SPRING_DATASOURCE_URL" },
+      { "service": "Flyway", "purpose": "DB schema migrations", "env_var": "N/A — auto-runs on startup" },
+      { "service": "Spring AI / Anthropic Claude", "purpose": "Chat completions for support chatbot", "env_var": "SPRING_AI_ANTHROPIC_API_KEY" },
+      { "service": "OpenAI embeddings", "purpose": "text-embedding-3-small for RAG chunks", "env_var": "SPRING_AI_OPENAI_API_KEY" },
+      { "service": "Stripe", "purpose": "Subscription billing", "env_var": "STRIPE_SECRET_KEY" },
+      { "service": "Resend / SMTP", "purpose": "Transactional email", "env_var": "RESEND_API_KEY" },
+      { "service": "MinIO", "purpose": "Object storage for uploaded documents", "env_var": "MINIO_ENDPOINT" }
+    ],
+    "gotchas": [
+      "target/ — Maven build output, never edit manually",
+      ".env — secrets file, never commit or edit manually",
+      "src/main/resources/db/migration/V*.sql — applied Flyway migrations, NEVER modify once applied"
+    ],
+    "build_order": ["mvn clean package — no special codegen step required"],
+    "test_isolation": [
+      "Docker Compose must be up before integration tests (Testcontainers uses real Postgres)",
+      "SPRING_PROFILES_ACTIVE=test env var required",
+      "Some tests require seed data — see test resource files"
+    ],
+    "sensitive_areas": [
+      "auth/ — JWT filter chain, token issuance, session management",
+      "tenant/ — TenantContext ThreadLocal, Hibernate filter, ALWAYS clear in finally",
+      "document/ingestion/ — async pipeline, TenantContextCopyingDecorator required"
+    ]
+  },
+  "conventions": {
+    "formatter": "none",
+    "branch_strategy": "feature-branches-to-develop",
+    "commit_format": "conventional",
+    "coverage_target": "80% service layer, 100% tenant isolation paths"
+  },
+  "permissions": {
+    "preset": "java",
+    "disallowed_tools": [],
+    "require_confirm": ["Bash(curl *)"],
+    "readonly_paths": [
+      "src/main/resources/db/migration/",
+      ".env"
+    ]
+  },
+  "hooks_selected": ["migration-guard", "tenant-safety-reminder", "compile-check-on-edit"],
+  "mcp_selected": [],
+  "agents_selected": [],
+  "ssot": {
+    "adr": true,
+    "codemaps": true
+  },
+  "collected_at": "2026-05-26T00:00:00Z"
+}

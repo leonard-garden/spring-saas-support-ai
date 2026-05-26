@@ -1,24 +1,36 @@
 {
   "permissions": {
     "allow": [
+      "Read",
+      "Write",
+      "Edit",
+      "Grep",
+      "Glob",
       "Bash(mvn *)",
+      "Bash(./mvnw *)",
+      "Bash(java *)",
       "Bash(docker *)",
       "Bash(docker-compose *)",
       "Bash(git *)",
-      "Bash(curl *)",
-      "Bash(java *)",
       "Bash(mkdir *)",
       "Bash(cp *)",
       "Bash(mv *)",
       "Bash(rm *)",
       "Bash(chmod *)",
       "Bash(unzip *)",
-      "Bash(rtk *)"
+      "Bash(rtk *)",
+      "Bash(find *)",
+      "Bash(grep *)"
     ],
     "deny": [
       "Bash(rm -rf /)",
       "Bash(git push --force *)",
-      "Bash(git reset --hard *)"
+      "Bash(git reset --hard *)",
+      "Bash(curl *)",
+      "Write(src/main/resources/db/migration/*)",
+      "Edit(src/main/resources/db/migration/*)",
+      "Write(.env)",
+      "Edit(.env)"
     ]
   },
   "hooks": {
@@ -39,7 +51,15 @@
         "hooks": [
           {
             "type": "command",
-            "command": "file=\"$CLAUDE_TOOL_OUTPUT\"; if echo \"$file\" | grep -q '\\.java$'; then echo '[hook] Java file modified — remember to run mvn test'; fi"
+            "command": "case \"$CLAUDE_TOOL_INPUT_PATH\" in *.java) mvn compile -q 2>&1 | tail -5 ;; esac"
+          },
+          {
+            "type": "command",
+            "command": "case \"$CLAUDE_TOOL_INPUT_PATH\" in */db/migration/V*.sql) echo '⚠️  WARNING: Editing applied Flyway migration — this breaks schema history! Only add new V*.sql files, never modify existing ones.' ;; esac"
+          },
+          {
+            "type": "command",
+            "command": "case \"$CLAUDE_TOOL_INPUT_PATH\" in *TenantContext*|*TenantEntity*|*JwtAuthFilter*|*TenantFilterAspect*) echo '⚠️  Editing tenant-critical file — verify TenantContext.clear() is in a finally block and @Async uses @Async(\"taskExecutor\")' ;; esac"
           }
         ]
       }
