@@ -1,5 +1,6 @@
 package com.leonardtrinh.supportsaas.document;
 
+import com.leonardtrinh.supportsaas.document.chunk.DocumentChunkRepository;
 import com.leonardtrinh.supportsaas.knowledgebase.KnowledgeBase;
 import com.leonardtrinh.supportsaas.knowledgebase.KnowledgeBaseRepository;
 import com.leonardtrinh.supportsaas.storage.MinioService;
@@ -12,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -26,15 +28,18 @@ public class DocumentServiceImpl implements DocumentService {
     );
 
     private final DocumentRepository documentRepository;
+    private final DocumentChunkRepository chunkRepository;
     private final KnowledgeBaseRepository knowledgeBaseRepository;
     private final MinioService minioService;
     private final DocumentProcessingService processingService;
 
     public DocumentServiceImpl(DocumentRepository documentRepository,
+                                DocumentChunkRepository chunkRepository,
                                 KnowledgeBaseRepository knowledgeBaseRepository,
                                 MinioService minioService,
                                 DocumentProcessingService processingService) {
         this.documentRepository = documentRepository;
+        this.chunkRepository = chunkRepository;
         this.knowledgeBaseRepository = knowledgeBaseRepository;
         this.minioService = minioService;
         this.processingService = processingService;
@@ -122,6 +127,34 @@ public class DocumentServiceImpl implements DocumentService {
         }
         minioService.delete(doc.getMinioKey());
         documentRepository.delete(doc);
+    }
+
+    @Override
+    @Transactional
+    public DocumentResponse retry(UUID id) {
+        UUID tenantId = TenantContext.getTenantId();
+        Document doc = documentRepository.findByIdAndBusinessId(id, tenantId)
+                .orElseThrow(() -> new DocumentNotFoundException(id));
+        if (doc.getStatus() != DocumentStatus.FAILED) {
+            throw new DocumentNotRetryableException(id, doc.getStatus());
+        }
+        chunkRepository.deleteByDocumentId(doc.getId().toString());
+        doc.setStatus(DocumentStatus.PENDING);
+        doc.setErrorMessage(null);
+        doc.setChunkCount(0);
+        doc.setUpdatedAt(Instant.now());
+        documentRepository.save(doc);
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    processingService.processAsync(doc.getId(), tenantId);
+                }
+            });
+        } else {
+            processingService.processAsync(doc.getId(), tenantId);
+        }
+        return toResponse(doc);
     }
 
     private void validate(MultipartFile file) {

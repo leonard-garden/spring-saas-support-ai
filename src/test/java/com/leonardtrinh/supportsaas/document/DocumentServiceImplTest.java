@@ -1,7 +1,7 @@
 package com.leonardtrinh.supportsaas.document;
 
+import com.leonardtrinh.supportsaas.document.chunk.DocumentChunkRepository;
 import com.leonardtrinh.supportsaas.knowledgebase.KnowledgeBase;
-import com.leonardtrinh.supportsaas.knowledgebase.KnowledgeBaseNotFoundException;
 import com.leonardtrinh.supportsaas.knowledgebase.KnowledgeBaseRepository;
 import com.leonardtrinh.supportsaas.storage.MinioService;
 import com.leonardtrinh.supportsaas.tenant.TenantContext;
@@ -9,10 +9,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
@@ -33,6 +36,9 @@ class DocumentServiceImplTest {
     private DocumentRepository documentRepository;
 
     @Mock
+    private DocumentChunkRepository chunkRepository;
+
+    @Mock
     private KnowledgeBaseRepository knowledgeBaseRepository;
 
     @Mock
@@ -48,7 +54,7 @@ class DocumentServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        documentService = new DocumentServiceImpl(documentRepository, knowledgeBaseRepository, minioService, processingService);
+        documentService = new DocumentServiceImpl(documentRepository, chunkRepository, knowledgeBaseRepository, minioService, processingService);
     }
 
     // --- helpers ---
@@ -61,6 +67,7 @@ class DocumentServiceImplTest {
 
     private Document makeDocument(DocumentStatus status) {
         Document doc = new Document();
+        ReflectionTestUtils.setField(doc, "id", UUID.randomUUID());
         doc.setBusinessId(TENANT_ID);
         doc.setKnowledgeBaseId(KB_ID);
         doc.setFilename("test.pdf");
@@ -260,6 +267,78 @@ class DocumentServiceImplTest {
             assertThatThrownBy(() -> documentService.delete(otherId))
                     .isInstanceOf(DocumentNotFoundException.class);
             verifyNoInteractions(minioService);
+        }
+    }
+
+    // --- retry tests ---
+
+    @Test
+    @DisplayName("retry_onFailedDocument_resetsStatusToPending_deletesChunks_callsProcessAsync")
+    void retry_onFailedDocument_resetsStatusToPending_deletesChunks_callsProcessAsync() {
+        UUID docId = UUID.randomUUID();
+        Document doc = makeDocument(DocumentStatus.FAILED);
+        doc.setErrorMessage("some error");
+        doc.setChunkCount(3);
+
+        try (MockedStatic<TenantContext> ctx = mockStatic(TenantContext.class)) {
+            ctx.when(TenantContext::getTenantId).thenReturn(TENANT_ID);
+            when(documentRepository.findByIdAndBusinessId(docId, TENANT_ID)).thenReturn(Optional.of(doc));
+            when(documentRepository.save(doc)).thenReturn(doc);
+
+            documentService.retry(docId);
+
+            verify(chunkRepository).deleteByDocumentId(doc.getId().toString());
+            verify(documentRepository).save(doc);
+            assertThat(doc.getStatus()).isEqualTo(DocumentStatus.PENDING);
+            assertThat(doc.getErrorMessage()).isNull();
+            assertThat(doc.getChunkCount()).isEqualTo(0);
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = DocumentStatus.class, names = {"PENDING", "PROCESSING", "READY"})
+    @DisplayName("retry_onNonFailedDocument_throwsDocumentNotRetryableException")
+    void retry_onNonFailedDocument_throwsDocumentNotRetryableException(DocumentStatus status) {
+        UUID docId = UUID.randomUUID();
+        Document doc = makeDocument(status);
+
+        try (MockedStatic<TenantContext> ctx = mockStatic(TenantContext.class)) {
+            ctx.when(TenantContext::getTenantId).thenReturn(TENANT_ID);
+            when(documentRepository.findByIdAndBusinessId(docId, TENANT_ID)).thenReturn(Optional.of(doc));
+
+            assertThatThrownBy(() -> documentService.retry(docId))
+                    .isInstanceOf(DocumentNotRetryableException.class);
+
+            verifyNoInteractions(chunkRepository, processingService);
+        }
+    }
+
+    @Test
+    @DisplayName("retry_whenDocumentNotFound_throwsDocumentNotFoundException")
+    void retry_whenDocumentNotFound_throwsDocumentNotFoundException() {
+        UUID docId = UUID.randomUUID();
+
+        try (MockedStatic<TenantContext> ctx = mockStatic(TenantContext.class)) {
+            ctx.when(TenantContext::getTenantId).thenReturn(TENANT_ID);
+            when(documentRepository.findByIdAndBusinessId(docId, TENANT_ID)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> documentService.retry(docId))
+                    .isInstanceOf(DocumentNotFoundException.class);
+        }
+    }
+
+    @Test
+    @DisplayName("retry_documentBelongsToOtherTenant_throwsDocumentNotFoundException")
+    void retry_documentBelongsToOtherTenant_throwsDocumentNotFoundException() {
+        UUID docId = UUID.randomUUID();
+        UUID tenantId = UUID.randomUUID();
+
+        try (MockedStatic<TenantContext> ctx = mockStatic(TenantContext.class)) {
+            ctx.when(TenantContext::getTenantId).thenReturn(tenantId);
+            when(documentRepository.findByIdAndBusinessId(docId, tenantId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> documentService.retry(docId))
+                    .isInstanceOf(DocumentNotFoundException.class);
         }
     }
 }

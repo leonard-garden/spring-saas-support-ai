@@ -9,4 +9,5 @@ public interface DocumentService {
     List<DocumentResponse> listAll(DocumentStatus status);
     DocumentResponse getById(UUID id);
     void delete(UUID id);
+    DocumentResponse retry(UUID id);
 }
