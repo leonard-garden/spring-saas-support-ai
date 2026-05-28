@@ -25,17 +25,26 @@ public class VectorStorage {
         if (!businessId.equals(currentTenant)) {
             throw new IllegalStateException("businessId mismatch: expected " + currentTenant + " but got " + businessId);
         }
-        float[] vector = embeddingModel.embed(content);
+        String sanitized = sanitize(content);
+        float[] vector = embeddingModel.embed(sanitized);
         String vectorString = toVectorString(vector);
         chunkRepository.insertChunk(
                 UUID.randomUUID().toString(),
                 businessId.toString(),
                 documentId.toString(),
                 chunkIndex,
-                content,
+                sanitized,
                 contentHash,
                 vectorString
         );
+    }
+
+    /**
+     * PostgreSQL rejects null bytes (0x00) in text columns — strip them along with
+     * other non-printable control chars that PDFs sometimes embed via font metadata.
+     */
+    private String sanitize(String text) {
+        return text.replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]", "");
     }
 
     public List<Object[]> search(String query, UUID businessId, int topK) {

@@ -4,8 +4,11 @@ import com.leonardtrinh.supportsaas.document.chunk.DocumentChunkRepository;
 import com.leonardtrinh.supportsaas.document.ingestion.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.InputStream;
 import java.time.Instant;
@@ -22,6 +25,7 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
     private final ContentHashFilter contentHashFilter;
     private final VectorStorage vectorStorage;
     private final DocumentChunkRepository chunkRepository;
+    private final TransactionTemplate requiresNewTx;
 
     public DocumentProcessingServiceImpl(DocumentRepository documentRepository,
                                          com.leonardtrinh.supportsaas.storage.MinioService minioService,
@@ -29,7 +33,8 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
                                          ChunkTextSplitter chunkTextSplitter,
                                          ContentHashFilter contentHashFilter,
                                          VectorStorage vectorStorage,
-                                         DocumentChunkRepository chunkRepository) {
+                                         DocumentChunkRepository chunkRepository,
+                                         PlatformTransactionManager txManager) {
         this.documentRepository = documentRepository;
         this.minioService = minioService;
         this.ingestionRouter = ingestionRouter;
@@ -37,6 +42,8 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
         this.contentHashFilter = contentHashFilter;
         this.vectorStorage = vectorStorage;
         this.chunkRepository = chunkRepository;
+        this.requiresNewTx = new TransactionTemplate(txManager);
+        this.requiresNewTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     @Override
@@ -73,15 +80,16 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
         } catch (Exception e) {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
-                markFailed(doc, "Processing interrupted");
-                return;
             }
-            try {
-                chunkRepository.deleteByDocumentId(documentId.toString());
-            } catch (Exception cleanupEx) {
-                // best-effort cleanup, don't override original exception
-            }
-            markFailed(doc, truncate(e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName(), 500));
+            // The main transaction is aborted at this point — any DB call on the same
+            // connection fails with "current transaction is aborted". Run markFailed in
+            // a fresh transaction so the document always reaches a terminal status.
+            // Chunk cleanup is handled by the outer transaction rollback.
+            String errorMessage = truncate(e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName(), 500);
+            requiresNewTx.execute(status -> {
+                markFailed(doc, errorMessage);
+                return null;
+            });
         }
     }
 
