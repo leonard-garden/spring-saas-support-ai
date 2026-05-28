@@ -1,28 +1,24 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mvn:*)",
-      "Bash(docker:*)",
-      "Bash(docker-compose:*)",
-      "Bash(git:*)",
-      "Bash(curl:*)",
-      "Bash(java:*)",
-      "Bash(find:*)",
-      "Bash(grep:*)",
-      "Bash(ls:*)",
-      "Bash(cat:*)",
-      "Bash(mkdir:*)",
-      "Bash(cp:*)",
-      "Bash(mv:*)",
-      "Bash(rm:*)",
-      "Bash(chmod:*)",
-      "Bash(echo:*)",
-      "Bash(rtk:*)"
+      "Bash(mvn *)",
+      "Bash(docker *)",
+      "Bash(docker-compose *)",
+      "Bash(git *)",
+      "Bash(curl *)",
+      "Bash(java *)",
+      "Bash(mkdir *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(rm *)",
+      "Bash(chmod *)",
+      "Bash(unzip *)",
+      "Bash(rtk *)"
     ],
     "deny": [
       "Bash(rm -rf /)",
-      "Bash(git push --force:*)",
-      "Bash(git reset --hard:*)"
+      "Bash(git push --force *)",
+      "Bash(git reset --hard *)"
     ]
   },
   "hooks": {

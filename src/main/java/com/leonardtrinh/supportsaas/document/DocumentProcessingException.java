@@ -7,6 +7,11 @@ import java.util.UUID;
 
 public class DocumentProcessingException extends AppException {
 
+    public DocumentProcessingException(String reason) {
+        super(HttpStatus.UNPROCESSABLE_ENTITY, "DOCUMENT_PROCESSING_FAILED",
+                "Failed to process document: " + reason);
+    }
+
     public DocumentProcessingException(UUID documentId, String reason) {
         super(HttpStatus.UNPROCESSABLE_ENTITY, "DOCUMENT_PROCESSING_FAILED",
                 "Failed to process document: id=" + documentId + ", reason=" + reason);
