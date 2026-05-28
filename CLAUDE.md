@@ -32,6 +32,9 @@ npm run build                          # tsc + vite build
 # Database
 mvn flyway:info
 mvn flyway:migrate
+
+# Security
+gitleaks detect --source . --no-banner # scan for secrets (runs automatically before git commit/push)
 ```
 
 Backend runs on `:8081`. Swagger UI: `http://localhost:8081/swagger-ui.html`.
@@ -56,6 +59,8 @@ com.leonardtrinh.supportsaas
 ├── storage/        # MinioService (object storage)
 ├── email/          # AsyncEmailSender (no-op dev / Spring Mail prod)
 ├── billing/        # Plan, Subscription stubs
+├── chat/           # (M3 stub) AI chat via Spring AI streaming SSE
+├── chatbot/        # (M3 stub) Embeddable widget backend
 ├── common/         # ApiResponse<T>, TenantEntity, GlobalExceptionHandler, AppException
 └── config/         # SecurityConfig, AsyncConfig, OpenApiConfig, RequestIdFilter
 ```
@@ -89,9 +94,9 @@ POST /api/v1/kb/documents/upload
           → DocumentChunkRepository.insertChunk()  # native SQL: CAST(? AS vector), to_tsvector
 ```
 
-**Critical**: `processAsync` runs in its own `REQUIRES_NEW` transaction. If it fails mid-way (e.g. PostgreSQL rejects a chunk), the main transaction is aborted. `markFailed` must run via `requiresNewTx.execute(...)` (a `TransactionTemplate` with `PROPAGATION_REQUIRES_NEW`) so the document is not left stuck in `PROCESSING`.
+**Critical**: `processAsync` runs in its own `REQUIRES_NEW` transaction. If it fails mid-way, `markFailed` must run via `requiresNewTx.execute(...)` (a `TransactionTemplate` with `PROPAGATION_REQUIRES_NEW`) so the document is not left stuck in `PROCESSING`.
 
-`VectorStorage.sanitize()` strips null bytes and C0 control characters (`\x00-\x08\x0B\x0C\x0E-\x1F`) — PDFBox can embed these in extracted text and PostgreSQL rejects `\x00` entirely.
+`VectorStorage.sanitize()` strips null bytes and C0 control characters (`\x00-\x08\x0B\x0C\x0E-\x1F`) — PDFBox embeds these and PostgreSQL rejects `\x00` entirely.
 
 ### Hybrid search
 
@@ -128,6 +133,8 @@ record ApiResponse<T>(boolean success, T data, String error) {
 }
 ```
 
+Code style: **Spotless** with google-java-format is planned but not yet configured in pom.xml. Follow Google Java Style manually until then.
+
 ---
 
 ## Testing rules
@@ -135,8 +142,31 @@ record ApiResponse<T>(boolean success, T data, String error) {
 - Unit tests: `{ClassName}Test`, `@ExtendWith(MockitoExtension.class)`
 - Integration tests: `{ClassName}IT`, `@SpringBootTest @Testcontainers`
 - `TenantIsolationIT` must pass before any release
-- Minimum 60% coverage on service layer; 100% on tenant isolation paths
+- Coverage targets: **80% line coverage overall**, **100% on service layer**, **100% on tenant isolation paths**
 - The pgvector PostgreSQL image used in CI is `pgvector/pgvector:pg16` — use the same locally
+
+---
+
+## Claude Code Harness
+
+### Agents (`.claude/agents/`)
+
+| Agent | Purpose | Trigger |
+|-------|---------|---------|
+| `drift-monitor` | Checks CLAUDE.md + architecture docs against actual codebase for drift | "check drift", "ssot health" |
+| `springboot-reviewer` | Reviews Spring Boot code: layered architecture, JPA, security, async safety | after writing Java code |
+| `tenant-guard` | Enforces tenant isolation rules on every change | when editing tenant/, auth/, or TenantEntity subclasses |
+| `api-doc-sync` | Checks OpenAPI/Swagger annotations stay in sync with controllers | after editing Controller files |
+
+### Hooks
+
+- **PreToolUse(Bash)**: `gitleaks` scans for secrets before any `git commit` or `git push` — exits 2 (blocks) if secrets found
+- **PostToolUse(Edit|Write)**: reminds to run `mvn test` after `.java` file edits
+- **Stop**: logs session + branch to `.omc/session-log.txt`
+
+### MCP
+
+- **postgres**: `@modelcontextprotocol/server-postgres` connected to `localhost:5432/supportsaas` (local docker-compose)
 
 ---
 
