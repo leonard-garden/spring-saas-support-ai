@@ -1,8 +1,6 @@
-# CLAUDE.md — spring-saas-support-ai
+# CLAUDE.md
 
-> Open-source AI Customer Support Platform for SMBs.
-> White-label chatbot trained on your docs, embeddable in 5 minutes.
-> Primary goal: portfolio/job hunting. Secondary: passive income.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 @.claude/memory/project-context.md
 @.claude/memory/architecture.md
@@ -12,136 +10,167 @@
 
 ---
 
-## Package Structure
-
-```
-com.leonardtrinh.supportsaas
-├── auth/           # JWT, signup, login, refresh, password reset
-├── tenant/         # TenantContext, Hibernate filter, Business entity
-├── member/         # Member, Invitation, role management
-├── knowledgebase/  # KB CRUD
-├── document/       # Upload, parse, chunk, embed pipeline
-├── chatbot/        # Chatbot settings, Widget config
-├── chat/           # Streaming SSE, conversation, message
-├── billing/        # Stripe, Subscription, Plan, UsageRecord
-├── admin/          # Super-admin endpoints
-├── common/         # Base entities, API response envelope, exception handler
-└── config/         # Security, async executor, OpenAPI, CORS
-```
-
-Each package follows slice architecture: `Controller → Service → Repository → Entity`.
-
----
-
-## Coding Rules
-
-### Java 21 specifics
-- Use **records** for DTOs and value objects — never Lombok
-- Use **sealed interfaces** for discriminated unions (e.g. document status results)
-- Use **pattern matching** (`instanceof`, switch expressions) where idiomatic
-- Use **virtual threads** (`Executors.newVirtualThreadPerTaskExecutor`) for async if Spring Boot 3.3+ supports it
-
-### Immutability
-- DTOs are records (inherently immutable)
-- Never mutate entity state outside of service layer
-- Builder pattern or `with`-style copy for updates
-
-### Error handling
-- Throw typed exceptions: `TenantNotFoundException`, `QuotaExceededException`, `DocumentProcessingException`
-- `GlobalExceptionHandler` maps them to `ProblemDetail` (RFC 7807)
-- Never return `null` — use `Optional<T>` or throw
-
-### API response envelope
-```java
-record ApiResponse<T>(boolean success, T data, String error) {
-    static <T> ApiResponse<T> ok(T data) { return new ApiResponse<>(true, data, null); }
-    static <T> ApiResponse<T> fail(String error) { return new ApiResponse<>(false, null, error); }
-}
-```
-
----
-
-## Multi-Tenancy — CRITICAL SAFETY RULES
-
-1. **Every business table MUST have `tenant_id` column** — enforced by Hibernate filter
-2. **TenantContext is ThreadLocal** — ALWAYS clear in `finally` block
-3. **Async methods MUST propagate tenant** via `TenantContextCopyingDecorator`
-4. **Never bypass the Hibernate filter** — no raw JPQL without tenant check
-5. **Write tenant isolation integration test before any other test**
-
-```java
-// ALWAYS this pattern in filters:
-try {
-    TenantContext.setTenantId(tenantId);
-    filterChain.doFilter(request, response);
-} finally {
-    TenantContext.clear();  // NEVER skip this
-}
-```
-
----
-
-## Testing Rules
-
-- **Minimum 60% coverage** on service layer
-- **100% coverage** on tenant isolation paths
-- Use **Testcontainers** — no H2, no mocked DB for integration tests
-- Test class naming: `{ClassName}Test` (unit), `{ClassName}IT` (integration)
-- Tenant isolation test: `TenantIsolationIT` — must pass before any release
-
-### Test structure
-```java
-@SpringBootTest
-@Testcontainers
-class SomeServiceIT {
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16");
-    // ...
-}
-```
-
----
-
-## Current Milestone
-
-**Milestone 1: Multi-tenant Foundation**
-Days 1–7. See `.claude/memory/project-context.md` for full checklist.
-
-After Milestone 1 completes: tag `v0.1.0`, update README, deploy to Render.
-
----
-
 ## Commands
 
 ```bash
-# Build
-mvn clean package -DskipTests
-
-# Test
-mvn test
-mvn verify  # includes integration tests
-
-# Run locally
-docker-compose up -d          # start postgres + adminer + mailhog
+# Backend
+mvn clean package -DskipTests          # build JAR
+mvn test                               # unit tests only
+mvn verify                             # unit + integration tests (Testcontainers)
+mvn test -Dtest=TenantIsolationIT      # single test class
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 
-# Database
-mvn flyway:migrate
-mvn flyway:info
+# Infrastructure (required before running backend)
+docker-compose up -d                   # postgres + pgvector + MinIO + adminer + mailhog
 
-# Single test class
-mvn test -Dtest=TenantIsolationIT
+# Frontend (in frontend/)
+npm run dev                            # dev server on :3000
+npm test                               # vitest watch
+npm run test:coverage                  # coverage report
+npm run build                          # tsc + vite build
+
+# Database
+mvn flyway:info
+mvn flyway:migrate
+
+# Security
+gitleaks detect --source . --no-banner # scan for secrets (runs automatically before git commit/push)
 ```
+
+Backend runs on `:8081`. Swagger UI: `http://localhost:8081/swagger-ui.html`.
 
 ---
 
-## What NOT to do
+## Architecture
 
-- ❌ No Lombok — use Java 21 records/modern syntax
-- ❌ No Kafka/RabbitMQ — use `@Async` + `ThreadPoolTaskExecutor`
-- ❌ No microservices — monolith first
-- ❌ No ElasticSearch — PgVector + PG full-text is enough
-- ❌ No multiple databases — one PostgreSQL for everything
-- ❌ No H2 for tests — Testcontainers only
-- ❌ No scope creep (mobile app, voice, multi-language UI, multiple LLMs)
-- ❌ No bypassing Hibernate tenant filter
+### Package layout
+
+```
+com.leonardtrinh.supportsaas
+├── auth/           # JWT, signup, login, refresh, password reset, email verification
+├── tenant/         # TenantContext (ThreadLocal), Hibernate filter, Business entity
+├── member/         # Member entity, role management
+├── invitation/     # Invitation flow, accept endpoint
+├── knowledgebase/  # KB CRUD
+├── document/       # Upload API, processing orchestration, retry
+│   ├── ingestion/  # IngestionRouter, ChunkTextSplitter, ContentHashFilter, VectorStorage
+│   ├── chunk/      # DocumentChunk entity + repository
+│   └── search/     # HybridSearchService, SearchController
+├── storage/        # MinioService (object storage)
+├── email/          # AsyncEmailSender (no-op dev / Spring Mail prod)
+├── billing/        # Plan, Subscription stubs
+├── chat/           # (M3 stub) AI chat via Spring AI streaming SSE
+├── chatbot/        # (M3 stub) Embeddable widget backend
+├── common/         # ApiResponse<T>, TenantEntity, GlobalExceptionHandler, AppException
+└── config/         # SecurityConfig, AsyncConfig, OpenApiConfig, RequestIdFilter
+```
+
+Each package: `Controller → Service (interface + impl) → Repository → Entity`. DTOs are Java records.
+
+### Frontend layout (`frontend/src/`)
+
+```
+lib/          # axios instance (api.ts), per-domain API modules (*Api.ts), tokenStorage
+store/        # authStore (Zustand tri-state: loading | authenticated | unauthenticated)
+hooks/        # useAuthInit, useDocuments, useSearch, useStatusPoller
+pages/        # one file per route
+components/   # auth/, dashboard/, kb/, layout/, members/, ui/ (shadcn)
+types/        # TypeScript interfaces mirroring backend DTOs
+```
+
+`lib/api.ts` holds the axios instance with the refresh-lock interceptor — all auth token logic lives there, not in individual API modules.
+
+### Document ingestion pipeline
+
+```
+POST /api/v1/kb/documents/upload
+  → DocumentServiceImpl.upload()        # saves PENDING, stores to MinIO, triggers async
+  → DocumentProcessingServiceImpl.processAsync()   @Async("processingExecutor")
+                                                    @Transactional(REQUIRES_NEW)
+      → IngestionRouter.route()         # selects strategy by MIME type (PDF/TXT/MD)
+      → ChunkTextSplitter.split()       # 500-token chunks, 100-token overlap
+      → ContentHashFilter.isNew()       # SHA-256 dedup per document
+      → VectorStorage.store()           # sanitize → embed → insertChunk
+          → DocumentChunkRepository.insertChunk()  # native SQL: CAST(? AS vector), to_tsvector
+```
+
+**Critical**: `processAsync` runs in its own `REQUIRES_NEW` transaction. If it fails mid-way, `markFailed` must run via `requiresNewTx.execute(...)` (a `TransactionTemplate` with `PROPAGATION_REQUIRES_NEW`) so the document is not left stuck in `PROCESSING`.
+
+`VectorStorage.sanitize()` strips null bytes and C0 control characters (`\x00-\x08\x0B\x0C\x0E-\x1F`) — PDFBox embeds these and PostgreSQL rejects `\x00` entirely.
+
+### Hybrid search
+
+`HybridSearchServiceImpl` runs two queries in parallel then fuses:
+1. `chunkRepository.vectorSearch()` — cosine similarity top-10 (PgVector)
+2. `chunkRepository.fullTextSearch()` — `tsvector @@ tsquery` top-10
+3. Reciprocal Rank Fusion (RRF) → top-5 chunks returned
+
+### Multi-tenancy
+
+`JwtAuthFilter` sets `TenantContext.setTenantId()` and clears it in `finally`. `TenantFilterAspect` (AOP) enables the Hibernate filter before every repository call. All business entities extend `TenantEntity` which carries `businessId` and the filter definition.
+
+`@Async` methods **must** use `@Async("processingExecutor")` (never bare `@Async`) — `AsyncConfig` wires `TenantContextCopyingDecorator` on that executor to propagate `tenantId` to worker threads.
+
+Virtual threads are **disabled** (`spring.threads.virtual.enabled=false`) because `ThreadLocal`-based `TenantContext` is incompatible with virtual thread pinning semantics.
+
+---
+
+## Coding rules
+
+- **No Lombok** — use Java 21 records for DTOs, modern syntax elsewhere
+- **No H2** — integration tests use Testcontainers (`PostgreSQLContainer`)
+- **No JdbcTemplate** — use `@Modifying @Query(nativeQuery=true)` on `JpaRepository` even for pgvector/tsvector casts
+- **No Kafka/RabbitMQ** — `@Async` + `ThreadPoolTaskExecutor`
+- **No microservices** — monolith only
+
+Error handling: typed exceptions (`DocumentNotFoundException`, `QuotaExceededException`, …) → `GlobalExceptionHandler` maps to `ProblemDetail` (RFC 7807). Never return `null` — use `Optional<T>` or throw.
+
+API envelope:
+```java
+record ApiResponse<T>(boolean success, T data, String error) {
+    static <T> ApiResponse<T> ok(T data)       { return new ApiResponse<>(true, data, null); }
+    static <T> ApiResponse<T> fail(String msg) { return new ApiResponse<>(false, null, msg); }
+}
+```
+
+Code style: **Spotless** with google-java-format is planned but not yet configured in pom.xml. Follow Google Java Style manually until then.
+
+---
+
+## Testing rules
+
+- Unit tests: `{ClassName}Test`, `@ExtendWith(MockitoExtension.class)`
+- Integration tests: `{ClassName}IT`, `@SpringBootTest @Testcontainers`
+- `TenantIsolationIT` must pass before any release
+- Coverage targets: **80% line coverage overall**, **100% on service layer**, **100% on tenant isolation paths**
+- The pgvector PostgreSQL image used in CI is `pgvector/pgvector:pg16` — use the same locally
+
+---
+
+## Claude Code Harness
+
+### Agents (`.claude/agents/`)
+
+| Agent | Purpose | Trigger |
+|-------|---------|---------|
+| `drift-monitor` | Checks CLAUDE.md + architecture docs against actual codebase for drift | "check drift", "ssot health" |
+| `springboot-reviewer` | Reviews Spring Boot code: layered architecture, JPA, security, async safety | after writing Java code |
+| `tenant-guard` | Enforces tenant isolation rules on every change | when editing tenant/, auth/, or TenantEntity subclasses |
+| `api-doc-sync` | Checks OpenAPI/Swagger annotations stay in sync with controllers | after editing Controller files |
+
+### Hooks
+
+- **PreToolUse(Bash)**: `gitleaks` scans for secrets before any `git commit` or `git push` — exits 2 (blocks) if secrets found
+- **PostToolUse(Edit|Write)**: reminds to run `mvn test` after `.java` file edits
+- **Stop**: logs session + branch to `.omc/session-log.txt`
+
+### MCP
+
+- **postgres**: `@modelcontextprotocol/server-postgres` connected to `localhost:5432/supportsaas` (local docker-compose)
+
+---
+
+## Current milestone
+
+**M3 — AI Chat + Embeddable Widget** (`v0.3`). See GitHub milestone for open issues.
+`chat/` and `chatbot/` packages are stubs — streaming SSE via Spring AI is the target implementation.
