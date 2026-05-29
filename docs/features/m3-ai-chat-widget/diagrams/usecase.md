@@ -8,27 +8,27 @@ All M3 actors and their interactions with the Chat Widget System. Covers the Bus
 ```mermaid
 graph LR
     %% Actors
-    Admin(["👤 Business Admin\n(ADMIN role, JWT)"])
-    Visitor(["👤 Website Visitor\n(anonymous, no JWT)"])
-    ClaudeAPI(["⚙️ Claude API\n(external system)"])
+    Admin(["Business Admin<br/>(ADMIN role, JWT)"])
+    Visitor(["Website Visitor<br/>(anonymous, no JWT)"])
+    ClaudeAPI(["Claude API<br/>(external system)"])
 
     %% Admin use cases
     subgraph AdminUC["Admin — Dashboard"]
-        UC01["UC-01\nCreate chat widget"]
-        UC02["UC-02\nConfigure widget\n(name, color, welcome msg)"]
-        UC03["UC-03\nSelect knowledge bases\nfor widget"]
-        UC04["UC-04\nCopy embed script tag"]
-        UC05["UC-05\nPreview chatbot\nin dashboard"]
-        UC06["UC-06\nView conversation\nhistory (sessions list)"]
-        UC07["UC-07\nView individual\nconversation thread"]
+        UC01["UC-01<br/>Create chat widget"]
+        UC02["UC-02<br/>Configure widget<br/>(name, color, welcome msg)"]
+        UC03["UC-03<br/>Select knowledge bases<br/>for widget"]
+        UC04["UC-04<br/>Copy embed script tag"]
+        UC05["UC-05<br/>Preview chatbot<br/>in dashboard"]
+        UC06["UC-06<br/>View conversation<br/>history (sessions list)"]
+        UC07["UC-07<br/>View individual<br/>conversation thread"]
     end
 
     %% Visitor use cases
     subgraph VisitorUC["Website Visitor — Embedded Widget"]
-        UC08["UC-08\nLoad chat widget\non external website"]
-        UC09["UC-09\nSend message\nto chatbot"]
-        UC10["UC-10\nReceive AI-generated\nresponse with source citation"]
-        UC11["UC-11\nContinue conversation\n(session memory)"]
+        UC08["UC-08<br/>Load chat widget<br/>on external website"]
+        UC09["UC-09<br/>Send message<br/>to chatbot"]
+        UC10["UC-10<br/>Receive AI-generated<br/>response with source citation"]
+        UC11["UC-11<br/>Continue conversation<br/>(session memory)"]
     end
 
     %% Admin → use cases
@@ -40,7 +40,7 @@ graph LR
     Admin --> UC07
 
     %% includes relationship
-    UC02 -. "«includes»" .-> UC03
+    UC02 -. "includes" .-> UC03
 
     %% Visitor → use cases
     Visitor --> UC08
@@ -48,7 +48,7 @@ graph LR
     Visitor --> UC11
 
     %% includes relationship
-    UC09 -. "«includes»" .-> UC10
+    UC09 -. "includes" .-> UC10
 
     %% System actor
     UC10 --> ClaudeAPI
