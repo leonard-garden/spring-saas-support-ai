@@ -3,7 +3,7 @@ name: db-schema
 version: 1.0.0
 description: |
   Thiết kế database schema + Flyway migration cho feature.
-  Output: docs/features/{slug}/db-schema.md
+  Output: docs/design/{slug}-erd.md
   Triggers: "design table", "db schema", "migration for X", "ERD", "thiết kế bảng",
   "flyway migration", "database schema", "schema for X", "tạo bảng"
 ---
@@ -27,15 +27,15 @@ Design database tables, produce Flyway migration SQL, and draft JPA entity skele
    - `.claude/memory/tech-stack.md`
    - `.claude/skills/forge/references/flyway-guide.md`
    - `.claude/skills/forge/references/multi-tenancy-guide.md`
-4. **Read SRS** — `docs/features/{slug}/SRS.md` for data requirements.
+4. **Read SRS** — `docs/design/{slug}-srs.md` for data requirements.
 5. **Scan existing migrations** — list files in `src/main/resources/db/migration/`, find the highest V-number. New migration = that number + 1 (zero-padded to 3 digits, e.g., V005).
 6. **Read existing entity classes** — check `src/main/java/com/leonardtrinh/supportsaas/` for entities related to this feature.
-7. **Create directory** — `mkdir -p docs/features/{slug}`
+7. **Create directory** — `mkdir -p docs/design`
 8. **Generate schema design** — follow template below
-9. **Save** — `docs/features/{slug}/db-schema.md`
+9. **Save** — `docs/design/{slug}-erd.md`
 10. **Commit:**
     ```bash
-    git add docs/features/{slug}/db-schema.md
+    git add docs/design/{slug}-erd.md
     git commit -m "docs(db): add schema design for {slug}"
     ```
 
