@@ -13,7 +13,7 @@ public class MessageUsageId implements Serializable {
     @Column(name = "business_id")
     private UUID businessId;
 
-    @Column(name = "year_month")
+    @Column(name = "year_month", columnDefinition = "CHAR(7)")
     private String yearMonth;
 
     public MessageUsageId() {}
