@@ -8,76 +8,76 @@ System-level view of all components involved in M3, including external integrati
 ```mermaid
 graph TB
     subgraph Clients
-        Dashboard["Dashboard SPA<br/>(React + Zustand)"]
-        Widget["Embeddable Widget<br/>(vanilla JS, &lt;50KB)"]
-        AnyWebsite["Any Website<br/>(embeds widget.js)"]
+        Dashboard["Dashboard SPA\nReact + Zustand"]
+        Widget["Embeddable Widget\nvanilla JS, under 50KB"]
+        AnyWebsite["Any Website\nembeds widget.js"]
     end
 
-    subgraph Spring Boot Backend [Spring Boot Backend :8081]
-        subgraph Security Layer
-            JwtFilter["JwtAuthFilter<br/>(OncePerRequestFilter)"]
-            SecConfig["SecurityConfig<br/>permitAll: /api/v1/widget/**<br/>permitAll: /widget.js"]
+    subgraph Backend["Spring Boot Backend :8081"]
+        subgraph Security["Security Layer"]
+            JwtFilter["JwtAuthFilter\nOncePerRequestFilter"]
+            SecConfig["SecurityConfig\npermitAll: /api/v1/widget/**\npermitAll: /widget.js"]
         end
 
-        subgraph chatbot package
-            ChatbotCtrl["ChatbotController<br/>POST /api/v1/chatbots<br/>GET /api/v1/chatbots/{id}/embed"]
+        subgraph ChatbotPkg["chatbot package"]
+            ChatbotCtrl["ChatbotController\nPOST /api/v1/chatbots\nGET /api/v1/chatbots/:id/embed"]
             ChatbotSvc["ChatbotServiceImpl"]
         end
 
-        subgraph chat package
-            ChatCtrl["ChatController<br/>POST /api/v1/chat/conversations/{id}/messages<br/>(SSE)"]
-            WidgetCtrl["WidgetController<br/>POST /api/v1/widget/{chatbotId}/chat<br/>(SSE, no JWT)"]
+        subgraph ChatPkg["chat package"]
+            ChatCtrl["ChatController\nPOST /api/v1/chat/conversations/:id/messages\nSSE"]
+            WidgetCtrl["WidgetController\nPOST /api/v1/widget/:chatbotId/chat\nSSE, no JWT"]
             ChatSvc["ChatServiceImpl"]
         end
 
-        subgraph billing package
-            MsgUsageSvc["MessageUsageServiceImpl<br/>(quota check + atomic increment)"]
+        subgraph BillingPkg["billing package"]
+            MsgUsageSvc["MessageUsageServiceImpl\nquota check + atomic increment"]
         end
 
-        subgraph RAG Pipeline [RAG Pipeline (M2)]
-            HybridSearch["HybridSearchService<br/>(vector + FTS parallel)"]
-            VectorStore["VectorStorage<br/>(pgvector cosine)"]
-            FTSStore["FullTextStorage<br/>(tsvector tsquery)"]
+        subgraph RAGPipeline["RAG Pipeline - M2"]
+            HybridSearch["HybridSearchService\nvector + FTS parallel"]
+            VectorStore["VectorStorage\npgvector cosine"]
+            FTSStore["FullTextStorage\ntsvector tsquery"]
         end
 
-        subgraph AI Integration
-            SpringAI["Spring AI ChatClient<br/>(Anthropic)"]
-            EmbedModel["Spring AI EmbeddingModel<br/>(OpenAI)"]
+        subgraph AIPkg["AI Integration"]
+            SpringAI["Spring AI ChatClient\nAnthropic"]
+            EmbedModel["Spring AI EmbeddingModel\nOpenAI"]
         end
 
-        TenantCtx["TenantContext<br/>(ThreadLocal)"]
-        StaticAsset["Static Asset Server<br/>GET /widget.js"]
+        TenantCtx["TenantContext\nThreadLocal"]
+        StaticAsset["Static Asset Server\nGET /widget.js"]
     end
 
-    subgraph PostgreSQL [:5432]
+    subgraph PG["PostgreSQL :5432"]
         chatbots_tbl[("chatbots")]
         conversations_tbl[("conversations")]
         messages_tbl[("chat_messages")]
         usage_tbl[("message_usage")]
-        chunks_tbl[("document_chunks<br/>(pgvector)")]
+        chunks_tbl[("document_chunks\npgvector")]
     end
 
-    subgraph External APIs
-        ClaudeAPI["Anthropic Claude API<br/>claude-3-5-sonnet / haiku<br/>(streaming)"]
-        OpenAIAPI["OpenAI Embeddings API<br/>text-embedding-3-small"]
+    subgraph ExtAPIs["External APIs"]
+        ClaudeAPI["Anthropic Claude API\nclaude-3-5-sonnet / haiku\nstreaming"]
+        OpenAIAPI["OpenAI Embeddings API\ntext-embedding-3-small"]
     end
 
     %% Client connections
     Dashboard -->|"JWT + REST/SSE"| JwtFilter
     AnyWebsite -->|"loads once"| StaticAsset
     StaticAsset -->|"serves"| Widget
-    Widget -->|"POST /api/v1/widget/{chatbotId}/chat<br/>X-Session-Id header, no JWT"| SecConfig
+    Widget -->|"POST widget chat\nX-Session-Id, no JWT"| SecConfig
 
     %% Security routing
     JwtFilter -->|"authenticated routes"| ChatCtrl
     JwtFilter -->|"authenticated routes"| ChatbotCtrl
-    SecConfig -->|"public route (permitAll)"| WidgetCtrl
+    SecConfig -->|"public route permitAll"| WidgetCtrl
 
     %% Tenant context
     JwtFilter -->|"setTenantId from JWT"| TenantCtx
-    WidgetCtrl -->|"setTenantId from chatbotId DB lookup"| TenantCtx
+    WidgetCtrl -->|"setTenantId from chatbotId lookup"| TenantCtx
 
-    %% Controller → Service
+    %% Controller to Service
     ChatbotCtrl --> ChatbotSvc
     ChatCtrl --> ChatSvc
     WidgetCtrl --> ChatbotSvc
@@ -93,7 +93,7 @@ graph TB
     HybridSearch --> FTSStore
     VectorStore --> chunks_tbl
     FTSStore --> chunks_tbl
-    EmbedModel -->|"query embedding at search time"| VectorStore
+    EmbedModel -->|"query embedding"| VectorStore
 
     %% DB writes
     ChatbotSvc --> chatbots_tbl
