@@ -2,8 +2,10 @@ package com.leonardtrinh.supportsaas.chat;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
+import org.hibernate.annotations.JdbcTypeCode;
 
 import java.io.Serializable;
+import java.sql.Types;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -14,6 +16,7 @@ public class MessageUsageId implements Serializable {
     private UUID businessId;
 
     @Column(name = "year_month", columnDefinition = "CHAR(7)")
+    @JdbcTypeCode(Types.CHAR)
     private String yearMonth;
 
     public MessageUsageId() {}
