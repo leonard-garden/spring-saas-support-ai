@@ -2,10 +2,10 @@
 name: db-schema
 version: 1.0.0
 description: |
-  Thiết kế database schema + Flyway migration cho feature.
+  Design database schema and Flyway migration for a feature.
   Output: docs/features/{slug}/db-schema.md
-  Triggers: "design table", "db schema", "migration for X", "ERD", "thiết kế bảng",
-  "flyway migration", "database schema", "schema for X", "tạo bảng"
+  Triggers: "design table", "db schema", "migration for X", "ERD",
+  "flyway migration", "database schema", "schema for X", "create table"
 ---
 
 ## Purpose

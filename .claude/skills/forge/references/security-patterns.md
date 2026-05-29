@@ -1,19 +1,19 @@
 # Security Patterns
 
-Spring Security config, endpoint authorization. Load khi task thêm endpoints hoặc thay đổi auth rules.
+Spring Security config, endpoint authorization. Load when the task adds endpoints or changes auth rules.
 
 ---
 
 ## Current State
 
-`SecurityConfig` hiện là placeholder — `anyRequest().permitAll()`.
-Sẽ được cập nhật khi implement auth endpoints (#5).
+`SecurityConfig` is currently a placeholder — `anyRequest().permitAll()`.
+It will be updated when auth endpoints are implemented (#5).
 
 ---
 
 ## Adding Endpoint Rules
 
-Khi thêm protected endpoints, update `SecurityConfig.securityFilterChain`:
+When adding protected endpoints, update `SecurityConfig.securityFilterChain`:
 
 ```java
 @Bean
@@ -43,14 +43,14 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter 
 ```
 
 **Rules:**
-- Public endpoints phải explicit `permitAll()`
+- Public endpoints must explicitly use `permitAll()`
 - Admin paths: `/api/v1/admin/**` → `hasRole("SUPER_ADMIN")`
 - Default: `anyRequest().authenticated()`
-- `JwtAuthFilter` được inject và add trước `UsernamePasswordAuthenticationFilter`
+- `JwtAuthFilter` is injected and added before `UsernamePasswordAuthenticationFilter`
 
 ---
 
-## JwtAuthFilter — Đã implement
+## JwtAuthFilter — Already implemented
 
 `JwtAuthFilter` (OncePerRequestFilter):
 1. Extract `Authorization: Bearer <token>` header
@@ -59,20 +59,20 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter 
 4. Set `SecurityContextHolder` authentication
 5. `finally`: `TenantContext.clear()`
 
-Controller nhận được auth context qua `SecurityContextHolder` hoặc `@AuthenticationPrincipal`.
+The controller receives auth context via `SecurityContextHolder` or `@AuthenticationPrincipal`.
 
 ---
 
 ## Getting Current User in Controller
 
 ```java
-// Option 1: @AuthenticationPrincipal (nếu JwtClaims implement UserDetails)
+// Option 1: @AuthenticationPrincipal (if JwtClaims implements UserDetails)
 @GetMapping("/me")
 public ApiResponse<MemberResponse> getMe(@AuthenticationPrincipal JwtClaims claims) {
     return ApiResponse.ok(memberService.getById(claims.memberId()));
 }
 
-// Option 2: SecurityContextHolder (bất kỳ đâu)
+// Option 2: SecurityContextHolder (anywhere)
 JwtClaims claims = (JwtClaims) SecurityContextHolder.getContext()
     .getAuthentication().getPrincipal();
 ```
@@ -82,38 +82,38 @@ JwtClaims claims = (JwtClaims) SecurityContextHolder.getContext()
 ## Role-based Authorization
 
 ```java
-// Method level (sau khi bật @EnableMethodSecurity)
+// Method level (after enabling @EnableMethodSecurity)
 @PreAuthorize("hasRole('ADMIN')")
 @DeleteMapping("/members/{id}")
 public void removeMember(@PathVariable UUID id) { ... }
 
-// Programmatic check trong service
+// Programmatic check in service
 if (claims.role().equals("OWNER") || claims.role().equals("ADMIN")) {
     // allowed
 }
 ```
 
-Available roles (từ `Role` enum): `OWNER`, `ADMIN`, `MEMBER`
+Available roles (from `Role` enum): `OWNER`, `ADMIN`, `MEMBER`
 
 ---
 
 ## Password Hashing
 
 ```java
-// BCryptPasswordEncoder — @Bean trong SecurityConfig
+// BCryptPasswordEncoder — @Bean in SecurityConfig
 @Bean
 public PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
 }
 
-// Usage trong service
+// Usage in service
 String hash = passwordEncoder.encode(rawPassword);
 boolean matches = passwordEncoder.matches(rawPassword, storedHash);
 ```
 
 ---
 
-## CORS (nếu cần cho widget)
+## CORS (if needed for widget)
 
 ```java
 .cors(cors -> cors.configurationSource(request -> {

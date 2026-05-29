@@ -2,10 +2,10 @@
 name: release
 version: 1.0.0
 description: |
-  Tạo release notes + deploy checklist cho một version.
+  Generate release notes and deploy checklist for a version.
   Output: docs/releases/v{X.Y.Z}-release.md
   Triggers: "release note", "release notes", "changelog", "what shipped",
-  "viết release", "deploy checklist", "chuẩn bị release", "release v"
+  "write release", "deploy checklist", "prepare release", "release v"
 ---
 
 ## Purpose

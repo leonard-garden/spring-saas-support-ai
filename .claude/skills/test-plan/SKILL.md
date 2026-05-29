@@ -2,10 +2,10 @@
 name: test-plan
 version: 1.0.0
 description: |
-  Viết test plan đầy đủ cho feature: unit, integration, tenant isolation, e2e.
+  Write a comprehensive test plan for a feature: unit, integration, tenant isolation, e2e.
   Output: docs/features/{slug}/test-plan.md
   Triggers: "test plan", "test strategy", "test cases for X", "what to test",
-  "viết test plan", "kiểm thử X", "test coverage for X", "how to test X"
+  "write test plan", "test coverage for X", "how to test X"
 ---
 
 ## Purpose

@@ -2,9 +2,9 @@
 name: srs
 version: 1.0.0
 description: |
-  Viết Formal SRS (IEEE 830) cho một feature. Output: docs/features/{slug}/SRS.md
-  Triggers: "viết SRS", "write SRS", "spec feature X", "requirements for X",
-  "viết requirements", "SRS for X"
+  Write a Formal SRS (IEEE 830) for a feature. Output: docs/features/{slug}/SRS.md
+  Triggers: "write SRS", "spec feature X", "requirements for X",
+  "write requirements", "SRS for X"
 ---
 
 ## Purpose

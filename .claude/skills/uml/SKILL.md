@@ -2,10 +2,10 @@
 name: uml
 version: 1.0.0
 description: |
-  Vẽ Mermaid diagrams cho feature: sequence, class, ER, component, flowchart.
+  Draw Mermaid diagrams for a feature: sequence, class, ER, component, flowchart.
   Output: docs/features/{slug}/diagrams/
-  Triggers: "draw diagram", "sequence diagram", "class diagram", "vẽ sơ đồ",
-  "vẽ biểu đồ", "ER diagram", "component diagram", "flow diagram", "vẽ sequence"
+  Triggers: "draw diagram", "sequence diagram", "class diagram", "activity diagram",
+  "ER diagram", "component diagram", "flow diagram", "flowchart"
 ---
 
 ## Purpose

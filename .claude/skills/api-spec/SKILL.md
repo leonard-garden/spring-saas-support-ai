@@ -2,9 +2,9 @@
 name: api-spec
 version: 1.0.0
 description: |
-  Thiết kế REST API contract cho feature. Output: docs/features/{slug}/api-spec.md
-  Triggers: "design API", "REST contract", "API cho X", "thiết kế API",
-  "endpoint for X", "API contract", "viết API spec", "API design"
+  Design REST API contract for a feature. Output: docs/features/{slug}/api-spec.md
+  Triggers: "design API", "REST contract", "API for X",
+  "endpoint for X", "API contract", "write API spec", "API design"
 ---
 
 ## Purpose

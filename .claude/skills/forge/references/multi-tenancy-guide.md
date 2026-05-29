@@ -1,6 +1,6 @@
 # Multi-Tenancy Guide
 
-Patterns cho tenant-aware code. Load khi task liên quan đến entity, async, hoặc cross-tenant ops.
+Patterns for tenant-aware code. Load when the task involves entities, async, or cross-tenant operations.
 
 ---
 
@@ -22,9 +22,9 @@ HTTP Request
 
 ---
 
-## Reads — không cần tenantId
+## Reads — tenantId not needed
 
-Hibernate filter tự áp dụng. Service không cần gọi TenantContext cho queries:
+Hibernate filter is applied automatically. Service does not need to call TenantContext for queries:
 
 ```java
 // CORRECT — filter auto-applied
@@ -35,7 +35,7 @@ public List<Member> listMembers() {
 
 ---
 
-## Writes — PHẢI set businessId
+## Writes — MUST set businessId
 
 ```java
 // CORRECT — must fetch tenantId before save
@@ -52,25 +52,25 @@ public KnowledgeBase create(CreateKnowledgeBaseRequest req) {
 
 ## Async — TenantContextCopyingDecorator
 
-`@Async` runs on different thread — ThreadLocal empty by default.
+`@Async` runs on a different thread — ThreadLocal is empty by default.
 
 ```java
 // CORRECT — use named executor
 @Async("taskExecutor")   // NOT bare @Async
 public CompletableFuture<Void> processDocumentAsync(UUID docId) {
-    // TenantContextCopyingDecorator đã copy tenantId sang thread này
+    // TenantContextCopyingDecorator has already copied tenantId to this thread
     Document doc = documentRepository.findById(docId)...;
     // ...
 }
 ```
 
-`taskExecutor` bean trong `AsyncConfig` đã được wrap với `TenantContextCopyingDecorator`.
+The `taskExecutor` bean in `AsyncConfig` is wrapped with `TenantContextCopyingDecorator`.
 
 ---
 
 ## Admin bypass — explicit disableFilter
 
-Chỉ dùng trong `Admin*` classes:
+Only permitted in `Admin*` classes:
 
 ```java
 @Repository
@@ -104,7 +104,7 @@ Business — NOT a TenantEntity (it IS the tenant)
 
 | Mistake | Fix |
 |---------|-----|
-| `new Entity()` mà không set `businessId` | Gọi `TenantContext.getTenantId()` trước khi save |
+| `new Entity()` without setting `businessId` | Call `TenantContext.getTenantId()` before save |
 | Bare `@Async` | `@Async("taskExecutor")` |
-| `TenantContext.setTenantId()` không có `finally` | Wrap trong try/finally |
-| Cross-tenant query trong non-Admin repo | Chỉ Admin* repos được disableFilter |
+| `TenantContext.setTenantId()` without `finally` | Wrap in try/finally |
+| Cross-tenant query in non-Admin repo | Only Admin* repos may call disableFilter |
