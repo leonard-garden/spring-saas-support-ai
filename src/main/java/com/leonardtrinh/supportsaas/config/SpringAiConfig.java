@@ -1,5 +1,6 @@
 package com.leonardtrinh.supportsaas.config;
 
+import org.springframework.ai.anthropic.AnthropicChatModel;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -8,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 public class SpringAiConfig {
 
     @Bean
-    ChatClient chatClient(ChatClient.Builder builder) {
-        return builder.build();
+    ChatClient chatClient(AnthropicChatModel anthropicChatModel) {
+        return ChatClient.builder(anthropicChatModel).build();
     }
 }
