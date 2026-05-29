@@ -1,6 +1,6 @@
 # Software Requirements Specification — M3: AI Chat + Embeddable Widget
 
-**Version:** 1.0
+**Version:** 1.1
 **Date:** 2026-05-29
 **Status:** Draft
 **Author:** Leonard Trinh
@@ -73,6 +73,8 @@ The public widget endpoint (`/api/v1/widget/**`) is unauthenticated and rate-lim
 - `spring.threads.virtual.enabled=false` — virtual threads break ThreadLocal scoping
 - SSE streaming is synchronous (not `@Async`) — handled inline in the controller thread via Spring AI's `Flux<ChatResponse>`
 - Public widget endpoint bypasses `JwtAuthFilter` — `TenantContext` must be set from `chatbotId` lookup, not JWT
+- `SecurityConfig` must add `/api/v1/widget/**` and `/widget.js` to the `permitAll()` block
+- CORS `allowedHeaders` must include `X-Session-Id` (used by widget for session continuity)
 
 ### 2.5 Assumptions & Dependencies
 - M2 is complete: `HybridSearchService`, `KnowledgeBase`, `DocumentChunk`, PgVector embeddings all operational
@@ -229,6 +231,7 @@ POST   /api/v1/chat/conversations/{id}/messages        Send message → SSE stre
 **Public Widget (NO JWT — rate limited):**
 ```
 POST   /api/v1/widget/{chatbotId}/chat     Send message → SSE stream
+GET    /widget.js                          Serve embeddable widget JS file (<50KB, vanilla JS)
 ```
 
 See [api-spec.md](api-spec.md) *(create with /api-spec)*
