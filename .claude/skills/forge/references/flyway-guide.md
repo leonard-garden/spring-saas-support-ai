@@ -1,6 +1,6 @@
 # Flyway Migration Guide
 
-Load khi task yêu cầu thêm bảng, cột, hoặc seed data mới.
+Load when the task requires adding tables, columns, or new seed data.
 
 ---
 
@@ -10,24 +10,24 @@ Load khi task yêu cầu thêm bảng, cột, hoặc seed data mới.
 V{N}__{description_with_underscores}.sql
 ```
 
-Next version: check `src/main/resources/db/migration/` → lấy số lớn nhất + 1.
+Next version: check `src/main/resources/db/migration/` → take the highest number + 1.
 
-| Hiện tại | Migration tiếp theo |
-|----------|---------------------|
+| Current | Next migration |
+|---------|----------------|
 | V8__seed_plans.sql | V9__... |
 
 ---
 
-## Migration phải tạo TRƯỚC khi viết Entity
+## Migration must be created BEFORE writing the Entity
 
-Thứ tự bắt buộc:
-1. Tạo migration SQL
-2. Viết Entity Java
-3. Verify với `FlywayMigrationIT`
+Mandatory order:
+1. Create migration SQL
+2. Write Java Entity
+3. Verify with `FlywayMigrationIT`
 
 ---
 
-## Template — Bảng Business Data (có tenant isolation)
+## Template — Business Data Table (with tenant isolation)
 
 ```sql
 -- V9__create_knowledge_bases.sql
@@ -40,19 +40,19 @@ CREATE TABLE knowledge_bases (
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Index bắt buộc cho business_id (query performance + tenant filter)
+-- Mandatory index on business_id (query performance + tenant filter)
 CREATE INDEX idx_knowledge_bases_business_id ON knowledge_bases(business_id);
 ```
 
 **Rules:**
-- `business_id UUID NOT NULL REFERENCES businesses(id)` — bắt buộc cho mọi business table
-- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()` — luôn dùng UUID
-- Timestamps: `TIMESTAMPTZ` không phải `TIMESTAMP`
-- `ON DELETE CASCADE` cho FK đến `businesses`
+- `business_id UUID NOT NULL REFERENCES businesses(id)` — required for every business table
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()` — always use UUID
+- Timestamps: `TIMESTAMPTZ` not `TIMESTAMP`
+- `ON DELETE CASCADE` for FK to `businesses`
 
 ---
 
-## Template — Join / Reference Table (không có tenant)
+## Template — Join / Reference Table (no tenant)
 
 ```sql
 -- V10__create_document_chunks.sql
@@ -69,15 +69,15 @@ CREATE INDEX idx_document_chunks_document_id ON document_chunks(document_id);
 
 ---
 
-## Template — Thêm cột vào bảng có sẵn
+## Template — Adding a column to an existing table
 
 ```sql
 -- V11__add_avatar_url_to_members.sql
 ALTER TABLE members
     ADD COLUMN avatar_url VARCHAR(500);
 
--- Không dùng NOT NULL nếu thêm vào bảng đã có dữ liệu
--- Trừ khi có DEFAULT value
+-- Do not use NOT NULL when adding to a table that already has data
+-- Unless a DEFAULT value is provided
 ALTER TABLE members
     ADD COLUMN display_name VARCHAR(100) NOT NULL DEFAULT '';
 ```
@@ -95,36 +95,36 @@ VALUES
 
 ---
 
-## Indexes — Khi nào cần
+## Indexes — When to create
 
 | Pattern | Index |
 |---------|-------|
-| FK column dùng trong WHERE | Luôn tạo |
-| Column dùng trong ORDER BY thường xuyên | Tạo |
-| Column có cardinality thấp (boolean, status enum) | Partial index |
-| Unique constraint | `CREATE UNIQUE INDEX` hoặc `UNIQUE` constraint |
+| FK column used in WHERE | Always create |
+| Column used frequently in ORDER BY | Create |
+| Low-cardinality column (boolean, status enum) | Partial index |
+| Unique constraint | `CREATE UNIQUE INDEX` or `UNIQUE` constraint |
 
 ---
 
 ## Verify migration
 
 ```bash
-mvn flyway:info      # xem migration status
-mvn verify           # chạy FlywayMigrationIT
+mvn flyway:info      # view migration status
+mvn verify           # run FlywayMigrationIT
 ```
 
-`FlywayMigrationIT` verify:
-- Tất cả migrations applied successfully
-- Required columns tồn tại
-- Required indexes tồn tại
+`FlywayMigrationIT` verifies:
+- All migrations applied successfully
+- Required columns exist
+- Required indexes exist
 
-Khi thêm bảng mới → thêm `assertColumnsExist` vào `FlywayMigrationIT`.
+When adding a new table → add `assertColumnsExist` to `FlywayMigrationIT`.
 
 ---
 
-## Không được làm
+## Do NOT
 
-- ❌ Sửa migration đã apply (tạo migration mới thay thế)
-- ❌ Xóa migration file
-- ❌ Thêm NOT NULL column vào bảng có data mà không có DEFAULT
-- ❌ Dùng `SERIAL` / `BIGSERIAL` — dùng `UUID DEFAULT gen_random_uuid()`
+- ❌ Edit a migration that has already been applied (create a new migration instead)
+- ❌ Delete migration files
+- ❌ Add a NOT NULL column to a table with existing data without a DEFAULT
+- ❌ Use `SERIAL` / `BIGSERIAL` — use `UUID DEFAULT gen_random_uuid()`

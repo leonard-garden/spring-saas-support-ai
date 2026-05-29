@@ -2,9 +2,9 @@
 name: srs
 version: 1.0.0
 description: |
-  Viết Formal SRS (IEEE 830) cho một feature. Output: docs/design/{slug}-srs.md
-  Triggers: "viết SRS", "write SRS", "spec feature X", "requirements for X",
-  "viết requirements", "SRS for X"
+  Write a Formal SRS (IEEE 830) for a feature. Output: docs/features/{slug}/SRS.md
+  Triggers: "write SRS", "spec feature X", "requirements for X",
+  "write requirements", "SRS for X"
 ---
 
 ## Purpose
@@ -25,20 +25,20 @@ Write a Formal Software Requirements Specification (IEEE 830) for a feature.
    - `.claude/memory/tech-stack.md`
    - `.claude/memory/project-context.md`
    - `.claude/memory/constraints.md`
-4. **Check for existing SRS** — if `docs/design/{slug}-srs.md` exists, read it first and enter **update mode** (patch changed sections only, do not overwrite the whole file)
+4. **Check for existing SRS** — if `docs/features/{slug}/SRS.md` exists, read it first and enter **update mode** (patch changed sections only, do not overwrite the whole file)
 5. **Scan existing code** — if `src/main/java/com/leonardtrinh/supportsaas/` has a package matching the feature, read relevant Controller/Service/Entity files to capture current state
-6. **Create directory** — `mkdir -p docs/design`
+6. **Create directory** — `mkdir -p docs/features/{slug}`
 7. **Generate SRS** — follow the IEEE 830 template below exactly
-8. **Save** — write to `docs/design/{slug}-srs.md`
+8. **Save** — write to `docs/features/{slug}/SRS.md`
 9. **Commit:**
    ```bash
-   git add docs/design/{slug}-srs.md
+   git add docs/features/{slug}/SRS.md
    git commit -m "docs(srs): add SRS for {slug}"
    ```
 
 ## Output Template
 
-Write the following structure to `docs/design/{slug}-srs.md`:
+Write the following structure to `docs/features/{slug}/SRS.md`:
 
 ```
 # Software Requirements Specification — {Feature Name}
@@ -148,10 +148,10 @@ Write the following structure to `docs/design/{slug}-srs.md`:
 ## 6. External Interface Requirements
 
 ### 6.1 API Interfaces
-See [{slug}-api-spec.md]({slug}-api-spec.md) *(create with /api-spec)*
+See [api-spec.md](api-spec.md) *(create with /api-spec)*
 
 ### 6.2 Database Interfaces
-See [{slug}-erd.md]({slug}-erd.md) *(create with /db-schema)*
+See [db-schema.md](db-schema.md) *(create with /db-schema)*
 
 ---
 

@@ -6,9 +6,9 @@ Java 21 idioms for this project. Load when: executor needs context, or Step 5 st
 
 ---
 
-## Records cho DTOs và Value Objects
+## Records for DTOs and Value Objects
 
-DTOs và value objects PHẢI là `record`. Không dùng class + Lombok.
+DTOs and value objects MUST be `record`. Do not use class + Lombok.
 
 ✅ PASS:
 ```java
@@ -35,14 +35,14 @@ public class CreateMemberRequest {
 # Detect Lombok usage
 grep -rn "@Data\|@Builder\|@Getter\|@Setter\|@AllArgsConstructor\|@NoArgsConstructor" \
   src/main/java --include="*.java"
-# Kết quả không rỗng = FAIL
+# Non-empty result = FAIL
 ```
 
 ---
 
 ## Interface + Impl pattern
 
-Service phải có interface + implementation riêng.
+Service must have a separate interface and implementation.
 
 ```
 JwtService          (interface — defines contract)
@@ -50,21 +50,21 @@ JwtServiceImpl      (implementation — @Service)
 ```
 
 ```bash
-# Tìm @Service class không có interface pair
+# Find @Service class without an interface pair
 grep -rn "@Service" src/main/java --include="*.java" -l
-# Với mỗi file: verify tồn tại interface cùng tên bỏ "Impl"
+# For each file: verify an interface exists with the same name minus "Impl"
 ```
 
 ---
 
-## Không return null từ Service
+## Do not return null from Service
 
-Service layer dùng `Optional<T>` hoặc throw typed exception. Không return `null`.
+Service layer uses `Optional<T>` or throws a typed exception. Do not return `null`.
 
 ```bash
 grep -rn "return null" src/main/java --include="*.java" \
   | grep -v "Test\|//\|test"
-# Kết quả trong service files = FAIL
+# Any result in service files = FAIL
 ```
 
 ✅ PASS:
@@ -81,9 +81,9 @@ public Member getByEmail(String email) {
 
 ---
 
-## @ConfigurationProperties cho config
+## @ConfigurationProperties for config values
 
-Config values không được hardcode — dùng `@ConfigurationProperties`.
+Config values must not be hardcoded — use `@ConfigurationProperties`.
 
 ```java
 @ConfigurationProperties(prefix = "app.jwt")
@@ -98,7 +98,7 @@ public record JwtProperties(
 
 ## Entity: explicit getters/setters (no Lombok)
 
-Entity dùng explicit getters/setters. Setters cho `businessId` phải override từ `TenantEntity`.
+Entity uses explicit getters/setters. The setter for `businessId` must override from `TenantEntity`.
 
 ```java
 @Override

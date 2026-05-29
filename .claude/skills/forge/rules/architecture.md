@@ -5,14 +5,14 @@ FAIL on any rule → fix before committing.
 
 ---
 
-## Rule 1 — Entity phải extend TenantEntity
+## Rule 1 — Entity must extend TenantEntity
 
-Mọi business entity (không phải Business/Tenant itself) phải extend `TenantEntity`.
+Every business entity (not Business/Tenant itself) must extend `TenantEntity`.
 
 ```bash
-# Tìm @Entity không extend TenantEntity
+# Find @Entity that does not extend TenantEntity
 grep -rn "@Entity" src/main/java --include="*.java" -l
-# Với mỗi file, verify: "extends TenantEntity"
+# For each file, verify: "extends TenantEntity"
 ```
 
 ❌ FAIL:
@@ -27,18 +27,18 @@ public class KnowledgeBase { ... }
 public class KnowledgeBase extends TenantEntity { ... }
 ```
 
-Exception: `Business` entity — it IS the tenant, không extend.
+Exception: `Business` entity — it IS the tenant, does not extend.
 
 ---
 
-## Rule 2 — @Async phải chỉ định executor
+## Rule 2 — @Async must specify executor
 
-Bare `@Async` dùng default Spring executor — không có `TenantContextCopyingDecorator`.
-Tenant context sẽ bị null trên async thread.
+Bare `@Async` uses the default Spring executor — it has no `TenantContextCopyingDecorator`.
+Tenant context will be null on the async thread.
 
 ```bash
 grep -rn "@Async" src/main/java --include="*.java" | grep -v '"taskExecutor"'
-# Kết quả không rỗng = FAIL
+# Non-empty result = FAIL
 ```
 
 ❌ FAIL: `@Async`
@@ -46,39 +46,39 @@ grep -rn "@Async" src/main/java --include="*.java" | grep -v '"taskExecutor"'
 
 ---
 
-## Rule 3 — disableFilter chỉ trong Admin* class
+## Rule 3 — disableFilter only in Admin* class
 
 ```bash
 grep -rn "disableFilter" src/main/java --include="*.java"
-# Mỗi kết quả: verify class name starts with "Admin"
+# For each result: verify class name starts with "Admin"
 ```
 
-❌ FAIL: `disableFilter` trong `MemberRepository`
-✅ PASS: `disableFilter` trong `AdminMemberRepository`
+❌ FAIL: `disableFilter` in `MemberRepository`
+✅ PASS: `disableFilter` in `AdminMemberRepository`
 
 ---
 
-## Rule 4 — Service không gọi EntityManager trực tiếp
+## Rule 4 — Service must not call EntityManager directly
 
-Service layer phải dùng Repository. Chỉ `Admin*Repository` được dùng `EntityManager`.
+The service layer must use Repository. Only `Admin*Repository` may use `EntityManager`.
 
 ```bash
 grep -rn "EntityManager" src/main/java --include="*.java" \
   | grep -v "Repository\|Config\|Test"
-# Kết quả không rỗng = FAIL
+# Non-empty result = FAIL
 ```
 
 ---
 
-## Rule 5 — TenantContext.clear() trong finally
+## Rule 5 — TenantContext.clear() inside finally
 
 ```bash
-# Tìm TenantContext.setTenantId không có finally pair
+# Find TenantContext.setTenantId without a finally pair
 grep -rn "TenantContext.setTenantId" src/main/java --include="*.java" -l
-# Với mỗi file: verify có "finally" block chứa TenantContext.clear()
+# For each file: verify there is a "finally" block containing TenantContext.clear()
 ```
 
-Pattern bắt buộc:
+Required pattern:
 ```java
 try {
     TenantContext.setTenantId(tenantId);
@@ -92,24 +92,24 @@ try {
 
 ## Rule 6 — Virtual threads disabled
 
-`spring.threads.virtual.enabled=false` — ThreadLocal-based TenantContext không tương thích với virtual threads.
+`spring.threads.virtual.enabled=false` — ThreadLocal-based TenantContext is incompatible with virtual threads.
 
 ```bash
 grep -rn "virtual.enabled" src/main/resources --include="*.yml" --include="*.properties"
-# Phải là false hoặc absent (default false)
+# Must be false or absent (default false)
 ```
 
 ---
 
-## Rule 7 — Controller không import Repository trực tiếp
+## Rule 7 — Controller must not import Repository directly
 
 ```bash
 grep -rn "import.*Repository" src/main/java --include="*.java" \
   | grep "Controller"
-# Kết quả không rỗng = FAIL
+# Non-empty result = FAIL
 ```
 
-Controller chỉ được import Service interface.
+Controller may only import Service interfaces.
 
 ---
 

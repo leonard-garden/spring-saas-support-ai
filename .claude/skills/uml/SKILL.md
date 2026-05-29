@@ -2,15 +2,15 @@
 name: uml
 version: 1.0.0
 description: |
-  Vẽ Mermaid diagrams cho feature: sequence, class, ER, component, flowchart.
-  Output: docs/design/{slug}-{type}.md
-  Triggers: "draw diagram", "sequence diagram", "class diagram", "vẽ sơ đồ",
-  "vẽ biểu đồ", "ER diagram", "component diagram", "flow diagram", "vẽ sequence"
+  Draw Mermaid diagrams for a feature: sequence, class, ER, component, flowchart.
+  Output: docs/features/{slug}/diagrams/
+  Triggers: "draw diagram", "sequence diagram", "class diagram", "activity diagram",
+  "ER diagram", "component diagram", "flow diagram", "flowchart"
 ---
 
 ## Purpose
 
-Generate Mermaid diagrams for a feature and save to `docs/design/`.
+Generate Mermaid diagrams for a feature and save to `docs/features/{slug}/diagrams/`.
 
 ## Diagram Types
 
@@ -41,14 +41,14 @@ Generate Mermaid diagrams for a feature and save to `docs/design/`.
    - `er` → read Entity classes + Flyway migrations in `src/main/resources/db/migration/`
    - `component` → read `config/` package + external integration classes
    - `flowchart` → read Service implementation for the business logic flow
-5. **Read SRS if exists** — `docs/design/{slug}-srs.md` for requirements context
+5. **Read SRS if exists** — `docs/features/{slug}/SRS.md` for requirements context
 6. **Check existing diagram** — if target file exists, read it and enter update mode
-7. **Create directory** — `mkdir -p docs/design`
+7. **Create directory** — `mkdir -p docs/features/{slug}/diagrams`
 8. **Generate Mermaid diagram** — follow conventions below
-9. **Save** — `docs/design/{slug}-{type}.md`
+9. **Save** — `docs/features/{slug}/diagrams/{slug}-{type}.md`
 10. **Commit:**
     ```bash
-    git add docs/design/{slug}-{type}.md
+    git add docs/features/{slug}/diagrams/{slug}-{type}.md
     git commit -m "docs(uml): add {type} diagram for {slug}"
     ```
 

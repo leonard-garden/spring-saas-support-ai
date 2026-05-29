@@ -1,13 +1,13 @@
 # API Patterns
 
-Response envelope, error format, validation. Load khi viết controller hoặc exception handler.
+Response envelope, error format, validation. Load when writing a controller or exception handler.
 
 ---
 
 ## ApiResponse<T> — Success Responses
 
 ```java
-// Định nghĩa (common/ApiResponse.java)
+// Definition (common/ApiResponse.java)
 public record ApiResponse<T>(boolean success, T data, String error) {
     public static <T> ApiResponse<T> ok(T data) {
         return new ApiResponse<>(true, data, null);
@@ -18,7 +18,7 @@ public record ApiResponse<T>(boolean success, T data, String error) {
 }
 ```
 
-**Dùng trong controller:**
+**Usage in controller:**
 ```java
 // Single object
 return ApiResponse.ok(service.getById(id));
@@ -30,7 +30,7 @@ return ApiResponse.ok(service.listAll());
 @ResponseStatus(HttpStatus.CREATED)
 return ApiResponse.ok(service.create(request));
 
-// No content (204) — không dùng ApiResponse
+// No content (204) — do not use ApiResponse
 @ResponseStatus(HttpStatus.NO_CONTENT)
 public void delete(@PathVariable UUID id) { ... }
 ```
@@ -39,11 +39,11 @@ public void delete(@PathVariable UUID id) { ... }
 
 ## ProblemDetail — Error Responses (RFC 7807)
 
-Exceptions được handle bởi `GlobalExceptionHandler` → trả về `ProblemDetail`.
-Controller KHÔNG tự return error — throw exception, handler tự map.
+Exceptions are handled by `GlobalExceptionHandler` → returns `ProblemDetail`.
+Controllers do NOT return errors directly — throw an exception and let the handler map it.
 
 ```java
-// Trong GlobalExceptionHandler
+// In GlobalExceptionHandler
 @ExceptionHandler(KnowledgeBaseNotFoundException.class)
 public ProblemDetail handleKnowledgeBaseNotFoundException(KnowledgeBaseNotFoundException ex) {
     ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
@@ -67,7 +67,7 @@ Error response shape:
 
 ## Validation
 
-Request DTOs dùng Bean Validation annotations:
+Request DTOs use Bean Validation annotations:
 ```java
 public record CreateKnowledgeBaseRequest(
     @NotBlank @Size(max = 100) String name,
@@ -76,17 +76,17 @@ public record CreateKnowledgeBaseRequest(
 ) {}
 ```
 
-Controller dùng `@Valid`:
+Controller uses `@Valid`:
 ```java
 public ApiResponse<KnowledgeBaseResponse> create(
     @Valid @RequestBody CreateKnowledgeBaseRequest request) { ... }
 ```
 
-Validation errors auto-handled bởi `GlobalExceptionHandler.handleValidationException` → 400 Bad Request.
+Validation errors are auto-handled by `GlobalExceptionHandler.handleValidationException` → 400 Bad Request.
 
 ---
 
-## Pagination (khi cần)
+## Pagination (when needed)
 
 ```java
 public record PageResponse<T>(

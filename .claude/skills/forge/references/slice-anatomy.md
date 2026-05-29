@@ -1,6 +1,6 @@
 # Slice Anatomy
 
-Cấu trúc một package slice hoàn chỉnh. Load khi tạo package mới.
+Complete structure of a package slice. Load when creating a new package.
 
 ---
 
@@ -12,10 +12,10 @@ Cấu trúc một package slice hoàn chỉnh. Load khi tạo package mới.
   {Domain}Service.java          # Interface
   {Domain}ServiceImpl.java      # Implementation (@Service)
   {Domain}Repository.java       # Spring Data interface
-  {Domain}.java                 # Entity (extends TenantEntity nếu business data)
+  {Domain}.java                 # Entity (extends TenantEntity if business data)
   {Domain}Request.java          # record — inbound DTO
   {Domain}Response.java         # record — outbound DTO
-  {Domain}NotFoundException.java  # Typed exception (nếu cần)
+  {Domain}NotFoundException.java  # Typed exception (if needed)
   package-info.java             # Package declaration
 ```
 
@@ -117,9 +117,9 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
 ```
 
 Key points:
-- Class-level `@Transactional(readOnly = true)`, override với `@Transactional` cho writes
-- Constructor injection (không @Autowired)
-- `TenantContext.getTenantId()` PHẢI được gọi khi tạo entity mới
+- Class-level `@Transactional(readOnly = true)`, override with `@Transactional` for writes
+- Constructor injection (no @Autowired)
+- `TenantContext.getTenantId()` MUST be called when creating a new entity
 
 ---
 

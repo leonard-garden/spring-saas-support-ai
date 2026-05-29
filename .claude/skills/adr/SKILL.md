@@ -2,10 +2,10 @@
 name: adr
 version: 1.0.0
 description: |
-  Viết Architecture Decision Record (MADR format) cho technical decision.
+  Write an Architecture Decision Record (MADR format) for a technical decision.
   Output: docs/adr/ADR-{NNN}-{slug}.md
-  Triggers: "architecture decision", "ADR", "viết ADR", "should we use X or Y",
-  "technical decision", "quyết định kiến trúc", "tại sao chọn X", "why did we choose"
+  Triggers: "architecture decision", "ADR", "should we use X or Y",
+  "technical decision", "why did we choose", "document this decision"
 ---
 
 ## Purpose

@@ -1,6 +1,6 @@
 # Testing Patterns
 
-Conventions cho unit tests và integration tests. Load khi viết tests.
+Conventions for unit tests and integration tests. Load when writing tests.
 
 ---
 
@@ -23,7 +23,7 @@ class KnowledgeBaseServiceImplTest {
     private KnowledgeBaseRepository repository;
 
     @Mock
-    private TenantContext tenantContext;  // nếu cần
+    private TenantContext tenantContext;  // if needed
 
     private KnowledgeBaseServiceImpl service;
 
@@ -36,7 +36,7 @@ class KnowledgeBaseServiceImplTest {
     @DisplayName("create → saves entity with correct businessId and name")
     void create_savesEntityWithCorrectFields() {
         UUID tenantId = UUID.randomUUID();
-        // setup TenantContext mock nếu cần
+        // setup TenantContext mock if needed
 
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -61,10 +61,10 @@ class KnowledgeBaseServiceImplTest {
 ```
 
 **Rules:**
-- `@DisplayName` trên mỗi test — mô tả behavior, không phải implementation
-- AssertJ (`assertThat`, `assertThatThrownBy`) — không dùng JUnit `assertEquals`
-- Mock chỉ direct dependencies — không mock transitive
-- Không dùng `@SpringBootTest` cho unit test — quá nặng
+- `@DisplayName` on every test — describe behavior, not implementation
+- AssertJ (`assertThat`, `assertThatThrownBy`) — do not use JUnit `assertEquals`
+- Mock only direct dependencies — do not mock transitive dependencies
+- Do not use `@SpringBootTest` for unit tests — too heavy
 
 ---
 
@@ -83,14 +83,14 @@ class KnowledgeBaseServiceIT {
 
     @BeforeEach
     void setUp() {
-        // Set tenant context cho mỗi test
+        // Set tenant context for each test
         TenantContext.setTenantId(TENANT_A_ID);
     }
 
     @AfterEach
     void tearDown() {
         TenantContext.clear();
-        // Cleanup test data nếu cần
+        // Clean up test data if needed
     }
 
     @Test
@@ -110,16 +110,16 @@ class KnowledgeBaseServiceIT {
 ```
 
 **Rules:**
-- `@SpringBootTest` + `@ActiveProfiles("test")` — dùng Testcontainers (configured trong application-test.yml)
-- Không dùng H2 — **không có exception**
-- `TenantContext.setTenantId()` trong `@BeforeEach`, clear trong `@AfterEach`
-- Verify data trực tiếp qua `JdbcTemplate` khi cần đảm bảo persistence
+- `@SpringBootTest` + `@ActiveProfiles("test")` — uses Testcontainers (configured in application-test.yml)
+- Do not use H2 — **no exceptions**
+- `TenantContext.setTenantId()` in `@BeforeEach`, clear in `@AfterEach`
+- Verify data directly via `JdbcTemplate` when persistence must be confirmed
 
 ---
 
 ## Tenant Isolation Test Pattern
 
-Cho mọi entity mới, phải test cross-tenant isolation:
+For every new entity, cross-tenant isolation must be tested:
 
 ```java
 @Test
@@ -147,11 +147,11 @@ void listAll_returnOnlyCurrentTenantEntities() {
 ## Test Data Helpers
 
 ```java
-// Static constants cho test tenants
+// Static constants for test tenants
 static final UUID TENANT_A_ID = UUID.fromString("11111111-0000-0000-0000-000000000000");
 static final UUID TENANT_B_ID = UUID.fromString("22222222-0000-0000-0000-000000000000");
 
-// Member builder cho test
+// Member builder for tests
 static Member testMember(UUID tenantId, Role role) {
     Member m = new Member();
     m.setId(UUID.randomUUID());

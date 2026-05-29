@@ -2,9 +2,9 @@
 name: api-spec
 version: 1.0.0
 description: |
-  Thiết kế REST API contract cho feature. Output: docs/design/{slug}-api-spec.md
-  Triggers: "design API", "REST contract", "API cho X", "thiết kế API",
-  "endpoint for X", "API contract", "viết API spec", "API design"
+  Design REST API contract for a feature. Output: docs/features/{slug}/api-spec.md
+  Triggers: "design API", "REST contract", "API for X",
+  "endpoint for X", "API contract", "write API spec", "API design"
 ---
 
 ## Purpose
@@ -24,15 +24,15 @@ Design and document the REST API contract for a feature.
    - `.claude/memory/architecture.md`
    - `.claude/memory/tech-stack.md`
    - `.claude/skills/forge/references/api-patterns.md`
-4. **Read SRS** — `docs/design/{slug}-srs.md` if it exists. Map each Functional Requirement to candidate endpoints.
+4. **Read SRS** — `docs/features/{slug}/SRS.md` if it exists. Map each Functional Requirement to candidate endpoints.
 5. **Scan existing controllers** — check `src/main/java/com/leonardtrinh/supportsaas/` for any existing Controller for this feature. If found, reverse-engineer the spec from code (code is source of truth).
 6. **Read security config** — `src/main/java/com/leonardtrinh/supportsaas/config/SecurityConfig.java` to understand which paths are public vs JWT-protected.
-7. **Create directory** — `mkdir -p docs/design`
+7. **Create directory** — `mkdir -p docs/features/{slug}`
 8. **Generate API spec** — follow template below
-9. **Save** — `docs/design/{slug}-api-spec.md`
+9. **Save** — `docs/features/{slug}/api-spec.md`
 10. **Commit:**
     ```bash
-    git add docs/design/{slug}-api-spec.md
+    git add docs/features/{slug}/api-spec.md
     git commit -m "docs(api): add API spec for {slug}"
     ```
 
