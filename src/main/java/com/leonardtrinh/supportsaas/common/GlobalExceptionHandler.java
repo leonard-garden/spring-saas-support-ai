@@ -3,8 +3,7 @@ package com.leonardtrinh.supportsaas.common;
 import com.leonardtrinh.supportsaas.billing.QuotaExceededException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolationException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.access.AccessDeniedException;
@@ -18,10 +17,10 @@ import java.net.URI;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     private static final String UPGRADE_URL = "/api/v1/billing/plans";
 
     // Must be declared before the generic AppException handler so Spring picks the most specific match

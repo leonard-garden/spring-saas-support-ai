@@ -23,4 +23,16 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    @Bean(name = "processingExecutor")
+    public Executor processingExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(4);
+        executor.setMaxPoolSize(16);
+        executor.setQueueCapacity(100);
+        executor.setTaskDecorator(new TenantContextCopyingDecorator());
+        executor.setThreadNamePrefix("ingestion-");
+        executor.initialize();
+        return executor;
+    }
 }

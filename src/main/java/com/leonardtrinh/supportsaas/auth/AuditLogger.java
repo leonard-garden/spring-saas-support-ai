@@ -3,8 +3,7 @@ package com.leonardtrinh.supportsaas.auth;
 import com.leonardtrinh.supportsaas.audit.AuditAction;
 import com.leonardtrinh.supportsaas.audit.AuditLog;
 import com.leonardtrinh.supportsaas.audit.AuditLogRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -12,10 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class AuditLogger {
-
-    private static final Logger log = LoggerFactory.getLogger(AuditLogger.class);
 
     private final AuditLogRepository auditLogRepository;
 

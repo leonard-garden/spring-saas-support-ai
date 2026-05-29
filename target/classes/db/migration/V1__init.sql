@@ -1,2 +1,0 @@
--- Initial schema placeholder
--- Subsequent migrations will create domain tables

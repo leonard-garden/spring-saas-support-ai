@@ -5,6 +5,7 @@ import com.leonardtrinh.supportsaas.billing.PlanRepository;
 import com.leonardtrinh.supportsaas.billing.Subscription;
 import com.leonardtrinh.supportsaas.billing.SubscriptionRepository;
 import com.leonardtrinh.supportsaas.billing.SubscriptionStatus;
+import com.leonardtrinh.supportsaas.knowledgebase.KnowledgeBaseService;
 import com.leonardtrinh.supportsaas.member.Member;
 import com.leonardtrinh.supportsaas.member.MemberRepository;
 import com.leonardtrinh.supportsaas.member.Role;
@@ -39,6 +40,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final AsyncEmailSender emailSender;
+    private final KnowledgeBaseService knowledgeBaseService;
 
     public AuthServiceImpl(
             MemberRepository memberRepository,
@@ -50,7 +52,8 @@ public class AuthServiceImpl implements AuthService {
             AuditLogger auditLogger,
             PasswordResetTokenRepository passwordResetTokenRepository,
             EmailVerificationTokenRepository emailVerificationTokenRepository,
-            AsyncEmailSender emailSender) {
+            AsyncEmailSender emailSender,
+            KnowledgeBaseService knowledgeBaseService) {
         this.memberRepository = memberRepository;
         this.businessRepository = businessRepository;
         this.planRepository = planRepository;
@@ -61,6 +64,7 @@ public class AuthServiceImpl implements AuthService {
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.emailVerificationTokenRepository = emailVerificationTokenRepository;
         this.emailSender = emailSender;
+        this.knowledgeBaseService = knowledgeBaseService;
     }
 
     @Override
@@ -80,6 +84,7 @@ public class AuthServiceImpl implements AuthService {
         business.setSlug(slugify(request.businessName()));
         business.setPlanId(freePlan.getId());
         business = businessRepository.save(business);
+        knowledgeBaseService.createForBusiness(business.getId());
 
         Member member = new Member();
         member.setBusinessId(business.getId());

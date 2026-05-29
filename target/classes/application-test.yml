@@ -1,9 +1,0 @@
-spring:
-  datasource:
-    url: jdbc:tc:postgresql:16:///supportsaas
-    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
-  flyway:
-    locations: classpath:db/migration
-    baseline-on-migrate: true
-  jpa:
-    show-sql: false
