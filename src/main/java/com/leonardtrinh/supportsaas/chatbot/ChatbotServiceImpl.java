@@ -108,8 +108,12 @@ public class ChatbotServiceImpl implements ChatbotService {
 
     @Override
     public Chatbot findActiveChatbot(UUID chatbotId) {
-        return chatbotRepository.findByIdAndIsActiveTrue(chatbotId)
-                .orElseThrow(ChatbotNotFoundException::new);
+        Chatbot chatbot = chatbotRepository.findById(chatbotId)
+                .orElseThrow(() -> new ChatbotNotFoundException(chatbotId));
+        if (!chatbot.isActive()) {
+            throw new ChatbotInactiveException(chatbotId);
+        }
+        return chatbot;
     }
 
     // --- private helpers ---

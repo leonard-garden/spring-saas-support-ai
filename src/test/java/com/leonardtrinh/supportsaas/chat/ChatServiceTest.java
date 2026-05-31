@@ -14,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import reactor.core.publisher.Flux;
@@ -95,11 +96,6 @@ class ChatServiceTest {
     @DisplayName("streamMessage — quota exceeded throws before any DB write")
     void streamMessage_quotaExceeded() {
         // given
-        String yearMonth = java.time.format.DateTimeFormatter
-            .ofPattern("yyyy-MM")
-            .withZone(java.time.ZoneOffset.UTC)
-            .format(java.time.Instant.now());
-
         doThrow(new QuotaExceededException("messages_per_month", 100, 100))
             .when(messageUsageService).checkQuota(eq(TENANT_ID), anyString());
 
@@ -187,6 +183,105 @@ class ChatServiceTest {
         // then
         assertThat(result).isSameAs(existing);
         verify(conversationRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("createConversation — saves conversation with correct businessId and chatbotId")
+    void createConversation_savesWithCorrectFields() {
+        Chatbot chatbot = new Chatbot();
+        ReflectionTestUtils.setField(chatbot, "id", CHATBOT_ID);
+        chatbot.setBusinessId(TENANT_ID);
+        when(chatbotRepository.findById(CHATBOT_ID)).thenReturn(Optional.of(chatbot));
+
+        Conversation saved = buildConversation();
+        when(conversationRepository.save(any(Conversation.class))).thenReturn(saved);
+
+        ConversationResponse response = chatService.createConversation(CHATBOT_ID);
+
+        assertThat(response).isNotNull();
+        ArgumentCaptor<Conversation> captor = ArgumentCaptor.forClass(Conversation.class);
+        verify(conversationRepository).save(captor.capture());
+        assertThat(captor.getValue().getBusinessId()).isEqualTo(TENANT_ID);
+        assertThat(captor.getValue().getChatbotId()).isEqualTo(CHATBOT_ID);
+    }
+
+    @Test
+    @DisplayName("createConversation — throws ChatbotNotFoundException when chatbot missing")
+    void createConversation_chatbotNotFound_throws() {
+        when(chatbotRepository.findById(CHATBOT_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> chatService.createConversation(CHATBOT_ID))
+            .isInstanceOf(com.leonardtrinh.supportsaas.chatbot.ChatbotNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("getMessages — returns messages in order for existing conversation")
+    void getMessages_found_returnsMessages() {
+        Conversation conv = buildConversation();
+        when(conversationRepository.findById(CONVERSATION_ID)).thenReturn(Optional.of(conv));
+
+        ChatMessage msg = new ChatMessage();
+        msg.setRole(MessageRole.USER);
+        msg.setContent("hello");
+        when(messageRepository.findByConversationIdOrderByCreatedAtAsc(CONVERSATION_ID))
+            .thenReturn(List.of(msg));
+
+        List<ChatMessageResponse> result = chatService.getMessages(CONVERSATION_ID);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).content()).isEqualTo("hello");
+        assertThat(result.get(0).role()).isEqualTo(MessageRole.USER);
+    }
+
+    @Test
+    @DisplayName("getMessages — throws ConversationNotFoundException when conversation missing")
+    void getMessages_conversationNotFound_throws() {
+        when(conversationRepository.findById(CONVERSATION_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> chatService.getMessages(CONVERSATION_ID))
+            .isInstanceOf(ConversationNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("streamMessage — throws ConversationNotFoundException when conversation missing")
+    void streamMessage_conversationNotFound_throws() {
+        doNothing().when(messageUsageService).checkQuota(any(), any());
+        when(conversationRepository.findById(CONVERSATION_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() ->
+            chatService.streamMessage(CONVERSATION_ID, "hello", new AtomicReference<>()))
+            .isInstanceOf(ConversationNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("listConversations — empty result returns empty page")
+    void listConversations_empty_returnsEmptyPage() {
+        org.springframework.data.domain.PageRequest pageable =
+            org.springframework.data.domain.PageRequest.of(0, 20);
+        when(conversationRepository.findAll(pageable))
+            .thenReturn(new org.springframework.data.domain.PageImpl<>(
+                Collections.emptyList(), pageable, 0));
+
+        org.springframework.data.domain.Page<ConversationSummary> result =
+            chatService.listConversations(pageable);
+
+        assertThat(result.getContent()).isEmpty();
+        assertThat(result.getTotalElements()).isZero();
+    }
+
+    @Test
+    @DisplayName("findOrCreateWidgetConversation — null sessionId always creates new Conversation")
+    void findOrCreateWidgetConversation_nullSessionId_createsNew() {
+        Conversation newConv = buildConversation();
+        when(conversationRepository.save(any(Conversation.class))).thenReturn(newConv);
+
+        Conversation result = chatService.findOrCreateWidgetConversation(CHATBOT_ID, null);
+
+        assertThat(result).isNotNull();
+        // findByChatbotIdAndSessionId must NOT be called — null branch skips it
+        verify(conversationRepository, never())
+            .findByChatbotIdAndSessionId(any(), any());
+        verify(conversationRepository).save(any(Conversation.class));
     }
 
     // --- helpers ---

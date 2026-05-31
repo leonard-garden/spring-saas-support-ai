@@ -91,15 +91,17 @@ class ChatbotServiceTest {
     }
 
     @Test
-    @DisplayName("findActiveChatbot — inactive chatbot throws ChatbotNotFoundException")
+    @DisplayName("findActiveChatbot — inactive chatbot throws ChatbotInactiveException (403)")
     void findActiveChatbot_inactive() {
         // given
         UUID chatbotId = UUID.randomUUID();
-        when(chatbotRepository.findByIdAndIsActiveTrue(chatbotId)).thenReturn(Optional.empty());
+        Chatbot chatbot = new Chatbot();
+        chatbot.setActive(false);
+        when(chatbotRepository.findById(chatbotId)).thenReturn(Optional.of(chatbot));
 
         // when/then
         assertThatThrownBy(() -> chatbotService.findActiveChatbot(chatbotId))
-            .isInstanceOf(ChatbotNotFoundException.class);
+            .isInstanceOf(ChatbotInactiveException.class);
     }
 
     @Test
@@ -110,7 +112,8 @@ class ChatbotServiceTest {
         Chatbot chatbot = new Chatbot();
         chatbot.setBusinessId(TENANT_ID);
         chatbot.setName("Active Bot");
-        when(chatbotRepository.findByIdAndIsActiveTrue(chatbotId)).thenReturn(Optional.of(chatbot));
+        chatbot.setActive(true);
+        when(chatbotRepository.findById(chatbotId)).thenReturn(Optional.of(chatbot));
 
         // when
         Chatbot result = chatbotService.findActiveChatbot(chatbotId);

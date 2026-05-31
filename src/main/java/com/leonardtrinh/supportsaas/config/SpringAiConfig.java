@@ -2,6 +2,7 @@ package com.leonardtrinh.supportsaas.config;
 
 import org.springframework.ai.anthropic.AnthropicChatModel;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -9,6 +10,7 @@ import org.springframework.context.annotation.Configuration;
 public class SpringAiConfig {
 
     @Bean
+    @ConditionalOnBean(AnthropicChatModel.class)
     ChatClient chatClient(AnthropicChatModel anthropicChatModel) {
         return ChatClient.builder(anthropicChatModel).build();
     }

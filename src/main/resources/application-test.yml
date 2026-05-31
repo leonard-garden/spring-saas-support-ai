@@ -7,7 +7,6 @@ spring:
       - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
       - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
       - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
-      - org.springframework.ai.model.anthropic.autoconfigure.AnthropicChatAutoConfiguration
   datasource:
     url: jdbc:tc:postgresql:16:///supportsaas
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
@@ -16,3 +15,6 @@ spring:
     baseline-on-migrate: true
   jpa:
     show-sql: false
+  ai:
+    anthropic:
+      api-key: test-dummy-key

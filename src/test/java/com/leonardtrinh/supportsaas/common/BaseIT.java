@@ -2,6 +2,7 @@ package com.leonardtrinh.supportsaas.common;
 
 import com.leonardtrinh.supportsaas.auth.AuthResponse;
 import com.leonardtrinh.supportsaas.auth.SignupRequest;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,6 +27,9 @@ public abstract class BaseIT {
 
     @MockBean
     protected EmbeddingModel embeddingModel;
+
+    @MockBean
+    protected ChatClient chatClient;
 
     @Autowired
     protected TestRestTemplate restTemplate;

@@ -18,8 +18,9 @@ public interface ChatbotService {
     EmbedResponse getEmbedSnippet(UUID id);
 
     /**
-     * Finds an active chatbot by ID. Used by WidgetController to resolve tenant from chatbotId.
-     * Throws ChatbotNotFoundException (404) if not found or is inactive.
+     * Finds a chatbot by ID for public widget use.
+     * Throws ChatbotNotFoundException (404) if the chatbot does not exist.
+     * Throws ChatbotInactiveException (403) if the chatbot exists but is inactive.
      */
     Chatbot findActiveChatbot(UUID chatbotId);
 }
