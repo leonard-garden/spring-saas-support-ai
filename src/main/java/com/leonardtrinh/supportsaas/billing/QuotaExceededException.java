@@ -10,7 +10,7 @@ public class QuotaExceededException extends AppException {
     private final long current;
 
     public QuotaExceededException(String metric, long limit, long current) {
-        super(HttpStatus.FORBIDDEN, "BILLING_QUOTA_EXCEEDED",
+        super(HttpStatus.TOO_MANY_REQUESTS, "BILLING_QUOTA_EXCEEDED",
                 "You have reached the limit of " + limit + " " + metric + " for your plan.");
         this.metric = metric;
         this.limit = limit;

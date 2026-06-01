@@ -2,6 +2,10 @@ spring:
   ai:
     openai:
       api-key: ${OPENAI_API_KEY:dev-placeholder}
+      chat:
+        options:
+          model: gpt-4o-mini
+          max-tokens: 1024
       embedding:
         options:
           model: text-embedding-3-small
