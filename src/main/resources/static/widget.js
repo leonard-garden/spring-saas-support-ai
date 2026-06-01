@@ -11,7 +11,7 @@
 
   function generateUuid() {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-      return generateUuid();
+      return crypto.randomUUID();
     }
     // Fallback for non-secure contexts (file://, plain HTTP)
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -34,6 +34,11 @@
 
   var scriptTag = document.currentScript || document.querySelector('script[data-widget-id]');
   if (!scriptTag) return;
+
+  // Derive base URL from the script's own src so API calls work from any origin
+  // e.g. script src="http://localhost:8081/widget.js" → apiBase="http://localhost:8081"
+  var _scriptSrc = scriptTag.src || '';
+  var apiBase = _scriptSrc ? _scriptSrc.substring(0, _scriptSrc.lastIndexOf('/')) : '';
 
   var chatbotId = scriptTag.getAttribute('data-widget-id');
   if (!chatbotId || !chatbotId.trim()) return;
@@ -68,7 +73,7 @@
   // ---------------------------------------------------------------------------
 
   function fetchConfig(id) {
-    return fetch('/api/v1/widget/' + id + '/config')
+    return fetch(apiBase + '/api/v1/widget/' + id + '/config')
       .then(function (res) {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
@@ -313,7 +318,7 @@
   // ---------------------------------------------------------------------------
 
   function sendMessage(chatbotId, sessionId, query, shadow, signal) {
-    return fetch('/api/v1/widget/' + chatbotId + '/chat', {
+    return fetch(apiBase + '/api/v1/widget/' + chatbotId + '/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
