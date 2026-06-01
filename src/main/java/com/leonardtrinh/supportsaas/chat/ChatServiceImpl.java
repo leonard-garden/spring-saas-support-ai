@@ -111,7 +111,8 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
-    public Flux<String> streamMessage(UUID conversationId, String query, AtomicReference<UUID> assistantMessageIdRef) {
+    public Flux<String> streamMessage(UUID conversationId, String query, AtomicReference<UUID> assistantMessageIdRef,
+            AtomicReference<List<SearchResult>> sourcesRef) {
         UUID tenantId = TenantContext.getTenantId();
         String yearMonth = YEAR_MONTH_FMT.format(Instant.now());
 
@@ -132,6 +133,9 @@ public class ChatServiceImpl implements ChatService {
 
         // 4. RAG retrieval
         List<SearchResult> chunks = hybridSearchService.search(query, RAG_TOP_K);
+        if (sourcesRef != null) {
+            sourcesRef.set(chunks);
+        }
 
         // 5. Load conversation history (last 20, DESC, then reverse for chronological order)
         List<ChatMessage> historyDesc = messageRepository

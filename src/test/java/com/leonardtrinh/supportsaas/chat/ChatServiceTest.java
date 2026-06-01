@@ -100,7 +100,7 @@ class ChatServiceTest {
             .when(messageUsageService).checkQuota(eq(TENANT_ID), anyString());
 
         // when/then
-        assertThatThrownBy(() -> chatService.streamMessage(CONVERSATION_ID, "hello", new AtomicReference<>()))
+        assertThatThrownBy(() -> chatService.streamMessage(CONVERSATION_ID, "hello", new AtomicReference<>(), null))
             .isInstanceOf(QuotaExceededException.class);
 
         // no message saved
@@ -132,7 +132,7 @@ class ChatServiceTest {
         when(messageRepository.save(any(ChatMessage.class))).thenReturn(savedMsg);
 
         // when
-        Flux<String> flux = chatService.streamMessage(CONVERSATION_ID, "What is refund policy?", new AtomicReference<>());
+        Flux<String> flux = chatService.streamMessage(CONVERSATION_ID, "What is refund policy?", new AtomicReference<>(), null);
 
         // consume stream to trigger doOnNext/doOnComplete
         StepVerifier.create(flux)
@@ -249,7 +249,7 @@ class ChatServiceTest {
         when(conversationRepository.findById(CONVERSATION_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
-            chatService.streamMessage(CONVERSATION_ID, "hello", new AtomicReference<>()))
+            chatService.streamMessage(CONVERSATION_ID, "hello", new AtomicReference<>(), null))
             .isInstanceOf(ConversationNotFoundException.class);
     }
 

@@ -95,7 +95,7 @@ public class ChatController {
         SseEmitter emitter = new SseEmitter(0L); // no timeout — stream duration is LLM-bounded
         AtomicReference<UUID> assistantMessageId = new AtomicReference<>();
 
-        chatService.streamMessage(id, request.query(), assistantMessageId)
+        chatService.streamMessage(id, request.query(), assistantMessageId, null)
                 .subscribe(
                     token -> {
                         try {
