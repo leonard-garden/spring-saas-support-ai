@@ -2,16 +2,17 @@ package com.leonardtrinh.supportsaas.storage;
 
 import io.minio.*;
 import jakarta.annotation.PostConstruct;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
 
-@Slf4j
 @Service
 public class MinioServiceImpl implements MinioService {
 
+    private static final Logger log = LoggerFactory.getLogger(MinioServiceImpl.class);
     private final MinioClient minioClient;
     private final MinioProperties props;
     private final boolean initOnStartup;

@@ -1,6 +1,6 @@
 # Exception Rules & Catalog
 
-Load khi: thêm exception mới, hoặc Phase 5 static check.
+Load when: adding a new exception, or during Phase 5 static check.
 
 ---
 
@@ -21,7 +21,7 @@ Pattern: `{Concept}{Problem}Exception`
 
 ---
 
-## Structure bắt buộc
+## Required structure
 
 ```java
 public class {Name}Exception extends RuntimeException {
@@ -31,12 +31,12 @@ public class {Name}Exception extends RuntimeException {
 }
 ```
 
-Không thêm fields, không thêm constructors trừ khi có lý do đặc biệt.
-Exception nằm trong package của domain nó thuộc về.
+Do not add fields or additional constructors unless there is a specific reason.
+The exception must live in the package of the domain it belongs to.
 
 ---
 
-## Catalog hiện có
+## Current catalog
 
 | Exception | Package | HTTP Status |
 |-----------|---------|-------------|
@@ -45,9 +45,9 @@ Exception nằm trong package của domain nó thuộc về.
 
 ---
 
-## GlobalExceptionHandler — cách thêm handler mới
+## GlobalExceptionHandler — how to add a new handler
 
-Khi thêm exception mới, phải thêm handler vào `GlobalExceptionHandler`:
+When adding a new exception, a handler must be added to `GlobalExceptionHandler`:
 
 ```java
 @ExceptionHandler({Name}Exception.class)
@@ -60,7 +60,7 @@ public ProblemDetail handle{Name}Exception({Name}Exception ex) {
 }
 ```
 
-URI slug: lowercase-with-dashes, ví dụ: `token-expired`, `tenant-not-found`.
+URI slug: lowercase-with-dashes, e.g.: `token-expired`, `tenant-not-found`.
 
 ---
 
@@ -68,20 +68,20 @@ URI slug: lowercase-with-dashes, ví dụ: `token-expired`, `tenant-not-found`.
 
 | Situation | Status |
 |-----------|--------|
-| Resource không tồn tại | 404 NOT_FOUND |
-| Token hết hạn / invalid | 401 UNAUTHORIZED |
-| Không có quyền | 403 FORBIDDEN |
-| Quota vượt giới hạn | 429 TOO_MANY_REQUESTS |
-| Lỗi business logic | 422 UNPROCESSABLE_ENTITY |
-| Lỗi processing (document, email) | 500 INTERNAL_SERVER_ERROR |
+| Resource does not exist | 404 NOT_FOUND |
+| Token expired / invalid | 401 UNAUTHORIZED |
+| Insufficient permissions | 403 FORBIDDEN |
+| Quota exceeded | 429 TOO_MANY_REQUESTS |
+| Business logic error | 422 UNPROCESSABLE_ENTITY |
+| Processing error (document, email) | 500 INTERNAL_SERVER_ERROR |
 
 ---
 
 ## Static check
 
 ```bash
-# Verify tất cả exceptions trong src/ đều extend RuntimeException
+# Verify all exceptions in src/ extend RuntimeException
 grep -rn "class.*Exception" src/main/java --include="*.java" \
   | grep -v "extends RuntimeException"
-# Kết quả (trừ abstract classes) = FAIL
+# Any result (excluding abstract classes) = FAIL
 ```

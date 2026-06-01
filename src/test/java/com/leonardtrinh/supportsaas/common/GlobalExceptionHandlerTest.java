@@ -53,8 +53,8 @@ class GlobalExceptionHandlerTest {
     @DisplayName("QuotaExceededException includes metric, limit, current, upgrade_url")
     void quotaExceeded_includesRichProperties() throws Exception {
         mockMvc.perform(get("/test/quota-exceeded"))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.status").value(429))
                 .andExpect(jsonPath("$.metric").value("MESSAGES_SENT"))
                 .andExpect(jsonPath("$.limit").value(100))
                 .andExpect(jsonPath("$.current").value(100))

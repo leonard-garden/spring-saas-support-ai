@@ -1,0 +1,257 @@
+<!--
+  Manual Acceptance Test — Embeddable Chat Widget
+  ================================================
+
+  HOW TO USE
+  ----------
+  1. Start the backend:
+       mvn spring-boot:run -Dspring-boot.run.profiles=dev
+     (requires docker-compose up -d for postgres + other infra)
+
+  2. Create a chatbot via the API or Swagger UI (http://localhost:8081/swagger-ui.html).
+     Copy the chatbot UUID from the response.
+
+  3. Replace REPLACE_WITH_REAL_ID below with that UUID:
+       data-widget-id="29c33b0a-06e6-455b-a8a9-4093f27080ed"
+
+  4. Open this file directly in a browser (file:// is fine), OR serve it:
+       npx serve . -p 3001
+     then visit http://localhost:3001/src/test/resources/widget-test.html
+
+  5. What to verify:
+     - Bubble appears bottom-right after page load
+     - Proactive greeting tooltip appears after ~3 s and is dismissible
+     - Clicking bubble opens the drawer with welcome message
+     - Typing a message and pressing Enter or clicking Send streams the response
+     - Messages display correctly (user right-aligned, bot left-aligned)
+     - Widget survives page refresh (same session_id, persisted visitor_id)
+     - Opening DevTools → Network shows the SSE stream on the /chat endpoint
+     - With an INVALID chatbot ID the widget should silently not appear
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Acme Corp — Customer Support Test Page</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #F9FAFB;
+      color: #111827;
+      line-height: 1.6;
+    }
+
+    /* Navigation */
+    nav {
+      background: #1F2937;
+      padding: 14px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    nav .logo { color: #F59E0B; font-weight: 700; font-size: 20px; }
+    nav ul { list-style: none; display: flex; gap: 24px; }
+    nav ul li a { color: #D1D5DB; text-decoration: none; font-size: 14px; }
+    nav ul li a:hover { color: #fff; }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #1F2937 0%, #374151 100%);
+      color: #fff;
+      padding: 80px 40px;
+      text-align: center;
+    }
+    .hero h1 { font-size: 42px; font-weight: 800; margin-bottom: 16px; }
+    .hero p { font-size: 18px; color: #D1D5DB; max-width: 560px; margin: 0 auto 32px; }
+    .hero .cta {
+      display: inline-block;
+      background: #F59E0B;
+      color: #fff;
+      font-weight: 600;
+      padding: 14px 32px;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+
+    /* Test notice */
+    .test-notice {
+      background: #FEF3C7;
+      border-left: 4px solid #F59E0B;
+      margin: 24px 40px;
+      padding: 14px 18px;
+      border-radius: 0 6px 6px 0;
+      font-size: 14px;
+      color: #92400E;
+    }
+
+    /* Main content */
+    main { max-width: 960px; margin: 0 auto; padding: 48px 40px; }
+    main h2 { font-size: 26px; font-weight: 700; margin-bottom: 16px; }
+    main p { color: #4B5563; margin-bottom: 24px; }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 24px;
+      margin-bottom: 48px;
+    }
+    .feature-card {
+      background: #fff;
+      border: 1px solid #E5E7EB;
+      border-radius: 10px;
+      padding: 24px;
+    }
+    .feature-card .icon { font-size: 28px; margin-bottom: 12px; }
+    .feature-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+    .feature-card p { font-size: 14px; color: #6B7280; margin: 0; }
+
+    /* Pricing */
+    .pricing {
+      background: #fff;
+      border: 1px solid #E5E7EB;
+      border-radius: 10px;
+      padding: 32px;
+      margin-bottom: 48px;
+    }
+    .pricing h2 { font-size: 22px; margin-bottom: 20px; }
+    .plans { display: flex; gap: 20px; flex-wrap: wrap; }
+    .plan {
+      flex: 1; min-width: 160px;
+      border: 2px solid #E5E7EB;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+    }
+    .plan.featured { border-color: #F59E0B; }
+    .plan .name { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+    .plan .price { font-size: 28px; font-weight: 800; color: #F59E0B; }
+    .plan .price span { font-size: 14px; color: #9CA3AF; font-weight: 400; }
+    .plan .desc { font-size: 12px; color: #6B7280; margin-top: 8px; }
+
+    /* FAQ */
+    .faq { margin-bottom: 48px; }
+    .faq-item { border-bottom: 1px solid #E5E7EB; padding: 16px 0; }
+    .faq-item h4 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .faq-item p { font-size: 14px; color: #6B7280; margin: 0; }
+
+    footer {
+      background: #1F2937;
+      color: #9CA3AF;
+      text-align: center;
+      padding: 24px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="logo">Acme Corp</div>
+    <ul>
+      <li><a href="#">Product</a></li>
+      <li><a href="#">Pricing</a></li>
+      <li><a href="#">Docs</a></li>
+      <li><a href="#">Login</a></li>
+    </ul>
+  </nav>
+
+  <div class="test-notice">
+    <strong>Widget Test Page</strong> — Open browser console to see logs.
+    Replace <code>data-widget-id</code> in the script tag at the bottom of this file with a real chatbot UUID.
+  </div>
+
+  <div class="hero">
+    <h1>AI-Powered Support,<br>Built for Modern Teams</h1>
+    <p>Deploy a smart chatbot on your site in minutes. No engineering required.</p>
+    <a href="#" class="cta">Start Free Trial</a>
+  </div>
+
+  <main>
+    <h2>Why Acme Support AI?</h2>
+    <p>Our platform connects to your knowledge base and answers customer questions instantly — 24/7, in your brand voice.</p>
+
+    <div class="features">
+      <div class="feature-card">
+        <div class="icon">&#129302;</div>
+        <h3>Smart Answers</h3>
+        <p>Retrieval-augmented generation ensures responses are grounded in your actual documentation.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#9889;</div>
+        <h3>Instant Deploy</h3>
+        <p>One script tag. No SDK, no build step, no framework dependency.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#128737;</div>
+        <h3>Multi-Tenant Secure</h3>
+        <p>Every business's data is isolated. Row-level security enforced at the database layer.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#127775;</div>
+        <h3>Brand Customizable</h3>
+        <p>Your logo, your colors, your welcome message. Feels native to your product.</p>
+      </div>
+    </div>
+
+    <div class="pricing">
+      <h2>Simple Pricing</h2>
+      <div class="plans">
+        <div class="plan">
+          <div class="name">Free</div>
+          <div class="price">$0<span>/mo</span></div>
+          <div class="desc">100 messages, 1 KB</div>
+        </div>
+        <div class="plan featured">
+          <div class="name">Starter</div>
+          <div class="price">$29<span>/mo</span></div>
+          <div class="desc">1,000 messages, 3 KBs</div>
+        </div>
+        <div class="plan">
+          <div class="name">Pro</div>
+          <div class="price">$99<span>/mo</span></div>
+          <div class="desc">10,000 messages, 10 KBs</div>
+        </div>
+        <div class="plan">
+          <div class="name">Business</div>
+          <div class="price">$299<span>/mo</span></div>
+          <div class="desc">Unlimited everything</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="faq">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-item">
+        <h4>How long does setup take?</h4>
+        <p>Under 5 minutes. Create a chatbot, upload your docs, paste the script tag.</p>
+      </div>
+      <div class="faq-item">
+        <h4>Which LLMs do you support?</h4>
+        <p>We use Anthropic Claude for generation and OpenAI embeddings for retrieval.</p>
+      </div>
+      <div class="faq-item">
+        <h4>Can I customize the widget appearance?</h4>
+        <p>Yes — set your brand color and welcome message in the dashboard.</p>
+      </div>
+      <div class="faq-item">
+        <h4>Is there a free trial?</h4>
+        <p>Yes. All new accounts get 14 days of Pro, no credit card required.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2025 Acme Corp &mdash; Widget Test Page (not a real product page)
+  </footer>
+
+  <!--
+    REPLACE data-widget-id with a real chatbot UUID before testing.
+    The widget is served by the Spring Boot backend at localhost:8081.
+  -->
+  <script src="http://localhost:8081/widget.js" data-widget-id="29c33b0a-06e6-455b-a8a9-4093f27080ed"></script>
+
+</body>
+</html>

@@ -1,7 +1,14 @@
 spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.anthropic.autoconfigure.AnthropicChatAutoConfiguration
   ai:
     openai:
       api-key: ${OPENAI_API_KEY:dev-placeholder}
+      chat:
+        options:
+          model: gpt-4o-mini
+          max-tokens: 1024
       embedding:
         options:
           model: text-embedding-3-small
@@ -30,9 +37,9 @@ spring:
             enable: false
 
 app:
-  base-url: http://localhost:3000
+  base-url: http://localhost:8081
   cors:
-    allowed-origins: http://localhost:3000,http://localhost:5173
+    allowed-origins: http://localhost:3000,http://localhost:5173,null
 
 logging:
   level:

@@ -7,7 +7,7 @@ description: Use when given a GitHub issue number to implement — branching, co
 
 ## Overview
 
-Issue → PR workflow cho project này. Prevents skipping architecture checks, verification evidence, commit trailers.
+Issue → PR workflow for this project. Prevents skipping architecture checks, verification evidence, commit trailers.
 
 **Invoke:** `/forge #N`
 
@@ -27,7 +27,7 @@ Read: `CLAUDE.md`, `.claude/memory/architecture.md`, `.claude/memory/multi-tenan
 | Config-only, 1–2 files, no business logic | QUICK |
 | New entity / service / repository layer | FULL |
 | Security, auth, multi-tenancy involved | FULL |
-| Design tradeoffs cần document | FULL |
+| Design tradeoffs to document | FULL |
 
 `"Choosing FULL/QUICK because [reason]. Proceed?"`
 

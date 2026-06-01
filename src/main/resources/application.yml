@@ -5,6 +5,9 @@ minio:
   bucket: ${MINIO_BUCKET:support-ai-kb}
 
 spring:
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
   application:
     name: spring-saas-support-ai
   threads:
