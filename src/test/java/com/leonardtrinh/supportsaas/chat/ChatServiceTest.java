@@ -258,7 +258,7 @@ class ChatServiceTest {
     void listConversations_empty_returnsEmptyPage() {
         org.springframework.data.domain.PageRequest pageable =
             org.springframework.data.domain.PageRequest.of(0, 20);
-        when(conversationRepository.findAll(pageable))
+        when(conversationRepository.findAllWithMessageStats(pageable))
             .thenReturn(new org.springframework.data.domain.PageImpl<>(
                 Collections.emptyList(), pageable, 0));
 

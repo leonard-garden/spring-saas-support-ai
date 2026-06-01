@@ -1,5 +1,11 @@
 spring:
   ai:
+    anthropic:
+      api-key: ${SPRING_AI_ANTHROPIC_API_KEY}
+      chat:
+        options:
+          model: claude-3-5-sonnet-20241022
+          max-tokens: 1024
     openai:
       api-key: ${OPENAI_API_KEY}
       embedding:

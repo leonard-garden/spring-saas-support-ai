@@ -14,9 +14,12 @@
 
 ## What is this?
 
-A multi-tenant SaaS backend where each business gets an isolated support workspace. Train a chatbot on your documentation, embed the widget on your site, let AI handle Tier-1 support.
+A multi-tenant SaaS backend where each business gets an isolated support workspace. Upload your documentation, train a chatbot on it, embed the widget on your site — AI handles Tier-1 support.
 
-This repository is Milestone 1 — the multi-tenant auth and member management foundation. RAG pipeline and chat widget ship in M2/M3.
+- **Multi-tenant** — row-level isolation, each business sees only its own data
+- **RAG pipeline** — hybrid vector + full-text search (PgVector + PostgreSQL FTS), Reciprocal Rank Fusion
+- **Streaming AI chat** — SSE via Spring AI, Claude 3.5 Sonnet in production
+- **Embeddable widget** — single `<script>` tag, vanilla JS, zero dependencies
 
 ---
 
@@ -28,14 +31,17 @@ This repository is Milestone 1 — the multi-tenant auth and member management f
 | Framework | Spring Boot 3.3 |
 | Database | PostgreSQL 16 + PgVector |
 | Migrations | Flyway |
+| AI | Spring AI — Anthropic Claude (chat) + OpenAI (embeddings) |
 | Auth | JJWT — access (15 min) + refresh (7 days) tokens |
 | Multi-tenancy | Row-level isolation via Hibernate filters |
 | Async | Spring `@Async` + `ThreadPoolTaskExecutor` |
+| Object storage | MinIO (document files) |
 | API Docs | springdoc-openapi (Swagger UI) |
 | Testing | JUnit 5 + Testcontainers (real DB, no H2) |
 | Container | Docker multi-stage build |
 | CI | GitHub Actions |
-| Hosting | Render (app) + Supabase (database) |
+| Hosting | Render (app + frontend) |
+| Frontend | React + Vite + shadcn/ui |
 
 ---
 
@@ -45,20 +51,27 @@ This repository is Milestone 1 — the multi-tenant auth and member management f
 # 1. Clone and start infrastructure
 git clone https://github.com/leonard-garden/spring-saas-support-ai
 cd spring-saas-support-ai
-docker-compose up -d
+docker-compose up -d        # postgres + pgvector + MinIO + mailhog
 
-# 2. Run the app
+# 2. Set required env vars
+cp .env.example .env        # fill in OPENAI_API_KEY at minimum
+
+# 3. Run the backend
 mvn spring-boot:run -Dspring-boot.run.profiles=dev
 
-# 3. Open Swagger UI
-open http://localhost:8080/swagger-ui.html
+# 4. Run the frontend
+cd frontend && npm install && npm run dev
+
+# 5. Open the app
+open http://localhost:3000
+# Swagger UI: http://localhost:8081/swagger-ui.html
 ```
 
-**Prerequisites:** Java 21, Maven 3.9+, Docker
+**Prerequisites:** Java 21, Maven 3.9+, Docker, Node 20+
 
 ---
 
-## API Overview (Milestone 1)
+## API Overview
 
 ### Auth — `/api/v1/auth`
 
@@ -78,11 +91,62 @@ open http://localhost:8080/swagger-ui.html
 |--------|------|-------------|------|
 | GET | `/` | List members in tenant | Bearer |
 | GET | `/me` | Current user profile | Bearer |
-| GET | `/{id}` | Get member by ID | Bearer |
 | POST | `/invite` | Send invitation email | Bearer (ADMIN) |
 | POST | `/api/v1/invitations/accept` | Accept invitation | Public |
 | PATCH | `/{id}/role` | Change member role | Bearer (ADMIN) |
 | DELETE | `/{id}` | Remove member | Bearer (ADMIN) |
+
+### Knowledge Base — `/api/v1/kb`
+
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| GET | `/` | Get KB info + document counts | Bearer |
+| GET | `/documents` | List documents | Bearer |
+| POST | `/documents` | Upload document (PDF/TXT/MD) | Bearer |
+| GET | `/documents/{id}` | Get document status | Bearer |
+| DELETE | `/documents/{id}` | Delete document | Bearer (ADMIN) |
+| POST | `/documents/search` | Hybrid search (vector + FTS) | Bearer |
+
+### Chat — `/api/v1/chat`
+
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| GET | `/conversations` | List conversations (paginated) | Bearer |
+| GET | `/conversations/{id}` | Get conversation with messages | Bearer |
+| POST | `/conversations` | Create conversation | Bearer |
+| POST | `/conversations/{id}/messages` | Stream AI response (SSE) | Bearer |
+
+### Widget Admin — `/api/v1/chat/widget`
+
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| GET | `/` | Get widget config | Bearer |
+| POST | `/` | Create widget | Bearer (ADMIN) |
+| PUT | `/{id}/config` | Update name/color/welcome message | Bearer (ADMIN) |
+| PUT | `/{id}/knowledge-bases` | Assign KBs to widget | Bearer (ADMIN) |
+| GET | `/{id}/embed` | Get embed snippet | Bearer |
+
+### Public Widget — `/api/v1/widget` (no auth)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/{chatbotId}/config` | Get widget config for embed |
+| POST | `/{chatbotId}/chat` | Stream AI chat response (SSE) |
+
+---
+
+## Embedding the Widget
+
+Copy the embed snippet from the Chat Widget page in the dashboard, or construct it manually:
+
+```html
+<script
+  src="https://spring-saas-support-ai.onrender.com/widget.js"
+  data-widget-id="your-chatbot-uuid">
+</script>
+```
+
+The widget renders a chat bubble in the bottom-right corner. No framework required.
 
 ---
 
@@ -90,7 +154,7 @@ open http://localhost:8080/swagger-ui.html
 
 ### Multi-tenancy: Row-level isolation
 
-Every business table carries a `business_id` UUID. Hibernate automatically appends `WHERE business_id = :tenantId` to all queries — no manual filtering in service code.
+Every business table carries a `business_id` UUID. Hibernate automatically appends `WHERE business_id = :tenantId` to all queries.
 
 ```
 HTTP Request → JwtAuthFilter → TenantContext.set(tenantId)
@@ -102,23 +166,21 @@ HTTP Request → JwtAuthFilter → TenantContext.set(tenantId)
               JwtAuthFilter finally → TenantContext.clear()
 ```
 
-### JWT structure
+`@Async` methods use `TenantContextCopyingDecorator` to propagate tenant context across thread boundaries.
 
-```json
-{ "sub": "user-uuid", "tenant_id": "tenant-uuid", "role": "ADMIN", "exp": 1234567890, "jti": "token-uuid" }
+### RAG pipeline
+
+```
+Upload → MinIO storage → async chunking (500 tokens, 100 overlap)
+       → SHA-256 dedup → OpenAI embeddings → PgVector store
+
+Query  → parallel: vector search (top-10) + FTS (top-10)
+       → Reciprocal Rank Fusion → top-5 chunks → Claude prompt
 ```
 
-### Error responses (RFC 7807 Problem Details)
+### Streaming chat (SSE)
 
-```json
-{
-  "type": "about:blank",
-  "title": "Not Found",
-  "status": 404,
-  "detail": "Member not found",
-  "instance": "/api/v1/members/123"
-}
-```
+Spring AI's reactive streaming sends tokens to the browser as they arrive. The public widget endpoint resolves tenant context from the chatbot record — never from user input.
 
 ---
 
@@ -128,11 +190,11 @@ HTTP Request → JwtAuthFilter → TenantContext.set(tenantId)
 # Unit tests
 mvn test
 
-# All tests including TenantIsolationIT (requires Docker for Testcontainers)
+# All tests including integration tests (requires Docker for Testcontainers)
 mvn verify
 ```
 
-`TenantIsolationIT` is the critical test — it verifies that tenant A cannot read tenant B's data under any condition. CI blocks merge if this test fails.
+`TenantIsolationIT` is the critical test — verifies tenant A cannot read tenant B's data. CI blocks merge if this test fails.
 
 ---
 
@@ -144,15 +206,22 @@ mvn verify
 |----------|-------------|
 | `SPRING_PROFILES_ACTIVE` | `prod` |
 | `JWT_SECRET` | 256-bit base64 random string |
-| `DATABASE_URL` | Supabase JDBC URL |
-| `DATABASE_USERNAME` | Supabase DB user |
-| `DATABASE_PASSWORD` | Supabase DB password |
-| `APP_BASE_URL` | Your Render app URL |
+| `DATABASE_URL` | PostgreSQL JDBC URL |
+| `DATABASE_USERNAME` | DB user |
+| `DATABASE_PASSWORD` | DB password |
+| `APP_BASE_URL` | Backend Render URL |
+| `CORS_ALLOWED_ORIGINS` | Frontend Render URL |
+| `OPENAI_API_KEY` | For embeddings (`text-embedding-3-small`) |
+| `SPRING_AI_ANTHROPIC_API_KEY` | For chat (`claude-3-5-sonnet-20241022`) |
+| `MAIL_USERNAME` | SMTP username |
+| `MAIL_PASSWORD` | SMTP password |
+| `MAIL_SENDER` | From address |
 
 ### Infrastructure
 
-- **App:** Render free web service (Docker runtime)
-- **Database:** Supabase free tier PostgreSQL (persistent, pgvector ready for M2)
+- **Backend:** Render web service (Docker runtime)
+- **Frontend:** Render static site (Vite build)
+- **Database:** PostgreSQL with PgVector extension
 - **CI/CD:** GitHub Actions — runs `mvn verify` on every push and PR
 
 ---
@@ -162,8 +231,8 @@ mvn verify
 | Milestone | Theme | Status |
 |-----------|-------|--------|
 | M1 | Multi-tenant auth + member management | ✅ v0.1.0 |
-| M2 | Knowledge Base + RAG pipeline (PgVector) | Planned |
-| M3 | AI Chat + embeddable JS widget | Planned |
+| M2 | Knowledge Base + RAG pipeline (PgVector) | ✅ v0.2.0 |
+| M3 | AI Chat + embeddable JS widget | ✅ v0.3.0 |
 | M4 | Billing (Stripe) + production hardening | Planned |
 
 ---

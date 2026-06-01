@@ -5,6 +5,7 @@ import { StatCard } from "@/components/dashboard/StatCard"
 import { Button } from "@/components/ui/button"
 import { useAuthStore } from "@/store/authStore"
 import { listMembers } from "@/lib/memberApi"
+import { getKb } from "@/lib/kbApi"
 
 const PLAN_LABEL = "Free Trial"
 
@@ -14,6 +15,11 @@ export function DashboardPage() {
   const { data: members = [] } = useQuery({
     queryKey: ["members"],
     queryFn: listMembers,
+  })
+
+  const { data: kb } = useQuery({
+    queryKey: ["kb"],
+    queryFn: getKb,
   })
 
   return (
@@ -38,7 +44,7 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-2 gap-4">
         <StatCard label="Members" value={members.length} />
-        <StatCard label="Knowledge Bases" value={0} />
+        <StatCard label="Documents" value={kb?.documentCount ?? 0} />
       </div>
     </div>
   )
