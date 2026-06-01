@@ -3,12 +3,11 @@ package com.leonardtrinh.supportsaas.chat;
 import java.time.Instant;
 import java.util.UUID;
 
-public record ConversationSummary(
+public record ConversationProjection(
     UUID id,
     UUID chatbotId,
-    String chatbotName,
     String sessionId,
+    Instant createdAt,
     long messageCount,
-    Instant lastMessageAt,
-    Instant createdAt
+    Instant lastMessageAt
 ) {}

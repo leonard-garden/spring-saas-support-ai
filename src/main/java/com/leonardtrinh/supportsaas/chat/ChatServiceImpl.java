@@ -20,8 +20,10 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -73,28 +75,25 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public Page<ConversationSummary> listConversations(Pageable pageable) {
-        Page<Conversation> page = conversationRepository.findAll(pageable);
+        Page<ConversationProjection> page = conversationRepository.findAllWithMessageStats(pageable);
+
+        List<UUID> chatbotIds = page.getContent().stream()
+                .map(ConversationProjection::chatbotId)
+                .distinct()
+                .toList();
+        Map<UUID, String> chatbotNames = chatbotRepository.findAllById(chatbotIds).stream()
+                .collect(Collectors.toMap(Chatbot::getId, Chatbot::getName));
 
         List<ConversationSummary> summaries = page.getContent().stream()
-                .map(conv -> {
-                    List<ChatMessage> messages = messageRepository
-                            .findByConversationIdOrderByCreatedAtAsc(conv.getId());
-                    int messageCount = messages.size();
-                    Instant lastMessageAt = messages.isEmpty()
-                            ? conv.getCreatedAt()
-                            : messages.get(messages.size() - 1).getCreatedAt();
-                    String chatbotName = chatbotRepository.findById(conv.getChatbotId())
-                            .map(Chatbot::getName)
-                            .orElse("Unknown");
-                    return new ConversationSummary(
-                        conv.getId(),
-                        conv.getChatbotId(),
-                        chatbotName,
-                        messageCount,
-                        lastMessageAt,
-                        conv.getCreatedAt()
-                    );
-                })
+                .map(proj -> new ConversationSummary(
+                        proj.id(),
+                        proj.chatbotId(),
+                        chatbotNames.getOrDefault(proj.chatbotId(), "Unknown"),
+                        proj.sessionId(),
+                        proj.messageCount(),
+                        proj.lastMessageAt() != null ? proj.lastMessageAt() : proj.createdAt(),
+                        proj.createdAt()
+                ))
                 .toList();
 
         return new PageImpl<>(summaries, pageable, page.getTotalElements());

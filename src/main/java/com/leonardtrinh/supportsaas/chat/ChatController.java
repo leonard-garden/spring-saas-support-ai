@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -57,8 +56,7 @@ public class ChatController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         int cappedSize = Math.min(size, 100);
-        PageRequest pageable = PageRequest.of(page, cappedSize,
-                Sort.by(Sort.Direction.DESC, "createdAt"));
+        PageRequest pageable = PageRequest.of(page, cappedSize);
         Page<ConversationSummary> result = chatService.listConversations(pageable);
         PageResponse<ConversationSummary> response = new PageResponse<>(
             result.getContent(),

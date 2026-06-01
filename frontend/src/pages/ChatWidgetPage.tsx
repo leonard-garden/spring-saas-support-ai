@@ -6,6 +6,7 @@ import { useWidget, useCreateWidget, useReplaceWidgetKbs } from "@/hooks/useChat
 import { WidgetConfigForm } from "@/components/widget/WidgetConfigForm"
 import { EmbedCodeBlock } from "@/components/widget/EmbedCodeBlock"
 import { WidgetPreview } from "@/components/widget/WidgetPreview"
+import { ConversationsTab } from "@/components/chat/ConversationsTab"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { api } from "@/lib/api"
@@ -29,7 +30,7 @@ function useKb() {
   })
 }
 
-type TabId = "config" | "kbs" | "embed"
+type TabId = "config" | "kbs" | "embed" | "conversations"
 
 function TabButton({ id, label, active, onClick }: { id: TabId; label: string; active: boolean; onClick: (id: TabId) => void }) {
   return (
@@ -163,6 +164,7 @@ export function ChatWidgetPage() {
         <TabButton id="config" label="Configuration" active={activeTab === "config"} onClick={setActiveTab} />
         <TabButton id="kbs" label="Knowledge Bases" active={activeTab === "kbs"} onClick={setActiveTab} />
         <TabButton id="embed" label="Embed Code" active={activeTab === "embed"} onClick={setActiveTab} />
+        <TabButton id="conversations" label="Conversations" active={activeTab === "conversations"} onClick={setActiveTab} />
       </div>
 
       {activeTab === "config" && (
@@ -198,6 +200,8 @@ export function ChatWidgetPage() {
           </CardContent>
         </Card>
       )}
+
+      {activeTab === "conversations" && <ConversationsTab />}
     </div>
   )
 }
