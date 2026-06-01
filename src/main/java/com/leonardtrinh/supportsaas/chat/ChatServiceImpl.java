@@ -110,6 +110,7 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
+    @Transactional
     public Flux<String> streamMessage(UUID conversationId, String query, AtomicReference<UUID> assistantMessageIdRef,
             AtomicReference<List<SearchResult>> sourcesRef) {
         UUID tenantId = TenantContext.getTenantId();
