@@ -10,6 +10,7 @@ import { VerifyEmailPage } from "@/pages/VerifyEmailPage"
 import { DashboardPage } from "@/pages/DashboardPage"
 import { MembersPage } from "@/pages/MembersPage"
 import { KbPage } from "@/pages/KbPage"
+import { ChatWidgetPage } from "@/pages/ChatWidgetPage"
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 import { AppShell } from "@/components/layout/AppShell"
 import { GuestRoute } from "@/components/auth/GuestRoute"
@@ -34,6 +35,7 @@ function AppRoutes() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/members" element={<MembersPage />} />
         <Route path="/kb" element={<KbPage />} />
+        <Route path="/widget" element={<ChatWidgetPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
