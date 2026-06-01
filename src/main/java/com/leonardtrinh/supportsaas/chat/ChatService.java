@@ -1,5 +1,6 @@
 package com.leonardtrinh.supportsaas.chat;
 
+import com.leonardtrinh.supportsaas.document.search.SearchResult;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import reactor.core.publisher.Flux;
@@ -23,7 +24,8 @@ public interface ChatService {
      * {@code assistantMessageIdRef} is populated with the saved ASSISTANT message UUID
      * once the stream completes — controllers use it to emit the {@code done} SSE event.
      */
-    Flux<String> streamMessage(UUID conversationId, String query, AtomicReference<UUID> assistantMessageIdRef);
+    Flux<String> streamMessage(UUID conversationId, String query, AtomicReference<UUID> assistantMessageIdRef,
+            AtomicReference<List<SearchResult>> sourcesRef);
 
     /**
      * Finds an existing conversation for the widget session, or creates a new one.

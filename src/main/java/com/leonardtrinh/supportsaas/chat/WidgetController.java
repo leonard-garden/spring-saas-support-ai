@@ -4,6 +4,7 @@ import com.leonardtrinh.supportsaas.chatbot.Chatbot;
 import com.leonardtrinh.supportsaas.chatbot.ChatbotService;
 import com.leonardtrinh.supportsaas.chatbot.ChatbotResponse;
 import com.leonardtrinh.supportsaas.common.ApiResponse;
+import com.leonardtrinh.supportsaas.document.search.SearchResult;
 import com.leonardtrinh.supportsaas.tenant.TenantContext;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -75,11 +77,12 @@ public class WidgetController {
 
             SseEmitter emitter = new SseEmitter(0L);
             AtomicReference<UUID> assistantMessageId = new AtomicReference<>();
+            AtomicReference<List<SearchResult>> sourcesRef = new AtomicReference<>();
 
             // Async Reactor callbacks run on Reactor threads — they must NOT rely on TenantContext
             // from the HTTP thread (ThreadLocal is not propagated). ChatServiceImpl.streamMessage
             // handles its own thread context internally via TransactionTemplate.
-            chatService.streamMessage(conversationId, request.query(), assistantMessageId)
+            chatService.streamMessage(conversationId, request.query(), assistantMessageId, sourcesRef)
                     .subscribe(
                         token -> {
                             try {
@@ -107,8 +110,10 @@ public class WidgetController {
                             try {
                                 UUID msgId = assistantMessageId.get();
                                 String msgIdStr = msgId != null ? msgId.toString() : "";
+                                List<SearchResult> sources = sourcesRef.get();
+                                String sourcesJson = buildSourcesJson(sources);
                                 emitter.send(SseEmitter.event()
-                                        .data("{\"done\":true,\"messageId\":\"" + msgIdStr + "\"}"));
+                                        .data("{\"done\":true,\"messageId\":\"" + msgIdStr + "\",\"sources\":" + sourcesJson + "}"));
                             } catch (IOException e) {
                                 log.error("failed to send widget done event", e);
                             } finally {
@@ -123,6 +128,19 @@ public class WidgetController {
             // Async callbacks run on Reactor threads and must not call TenantContext.clear() here.
             TenantContext.clear();
         }
+    }
+
+    private static String buildSourcesJson(List<SearchResult> sources) {
+        if (sources == null || sources.isEmpty()) return "[]";
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < sources.size(); i++) {
+            SearchResult s = sources.get(i);
+            if (i > 0) sb.append(",");
+            sb.append("{\"documentId\":\"").append(s.documentId()).append("\"")
+              .append(",\"name\":\"").append(escapeJson(s.documentName())).append("\"}");
+        }
+        sb.append("]");
+        return sb.toString();
     }
 
     private static String escapeJson(String value) {
