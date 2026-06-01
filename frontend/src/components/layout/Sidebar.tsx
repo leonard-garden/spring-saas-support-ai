@@ -1,4 +1,4 @@
-import { Home, Users, BookOpen } from "lucide-react"
+import { Home, Users, BookOpen, MessageSquare } from "lucide-react"
 import { useAuthStore } from "@/store/authStore"
 import { LogoutButton } from "@/components/auth/LogoutButton"
 import { SidebarNavLink } from "./SidebarNavLink"
@@ -18,6 +18,7 @@ export function Sidebar() {
         <SidebarNavLink to="/dashboard" end icon={<Home className="h-4 w-4" />} label="Home" />
         <SidebarNavLink to="/members" icon={<Users className="h-4 w-4" />} label="Members" />
         <SidebarNavLink to="/kb" icon={<BookOpen className="h-4 w-4" />} label="Knowledge Base" />
+        <SidebarNavLink to="/widget" icon={<MessageSquare className="h-4 w-4" />} label="Chat Widget" />
       </nav>
 
       <div className="border-t border-stone-800 px-4 py-3 space-y-0.5">
