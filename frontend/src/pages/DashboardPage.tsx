@@ -44,7 +44,7 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-2 gap-4">
         <StatCard label="Members" value={members.length} />
-        <StatCard label="Knowledge Bases" value={kb ? 1 : 0} />
+        <StatCard label="Documents" value={kb?.documentCount ?? 0} />
       </div>
     </div>
   )
