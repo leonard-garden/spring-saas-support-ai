@@ -5,9 +5,6 @@ minio:
   bucket: ${MINIO_BUCKET:support-ai-kb}
 
 spring:
-  autoconfigure:
-    exclude:
-      - org.springframework.ai.model.anthropic.autoconfigure.AnthropicChatAutoConfiguration
   ai:
     openai:
       api-key: ${OPENAI_API_KEY}
