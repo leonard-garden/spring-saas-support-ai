@@ -5,6 +5,9 @@ minio:
   bucket: ${MINIO_BUCKET:support-ai-kb}
 
 spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
   application:
     name: spring-saas-support-ai
   threads:
