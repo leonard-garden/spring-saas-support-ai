@@ -404,7 +404,10 @@
       if (parsed.sources && parsed.sources.length > 0 && botBubble) {
         var citations = document.createElement('div');
         citations.className = '_ws_sources';
+        var seenDocIds = {};
         parsed.sources.forEach(function (src) {
+          if (seenDocIds[src.documentId]) return;
+          seenDocIds[src.documentId] = true;
           var cite = document.createElement('div');
           cite.className = '_ws_cite';
           cite.textContent = '📄 ' + src.name;
