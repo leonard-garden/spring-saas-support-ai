@@ -10,4 +10,5 @@ public interface SubscriptionService {
     Optional<Plan> getCurrentPlan(UUID businessId);
     boolean isActivePaid(UUID businessId);
     List<Plan> getActivePlans();
+    CheckoutResponse startCheckout(UUID businessId, String adminEmail, String planSlug);
 }

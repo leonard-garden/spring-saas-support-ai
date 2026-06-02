@@ -1,10 +1,19 @@
 package com.leonardtrinh.supportsaas.billing;
 
 import com.leonardtrinh.supportsaas.auth.PlanMisconfiguredException;
+import com.leonardtrinh.supportsaas.common.ResourceNotFoundException;
+import com.leonardtrinh.supportsaas.tenant.Business;
+import com.leonardtrinh.supportsaas.tenant.BusinessRepository;
+import com.stripe.model.Customer;
+import com.stripe.model.checkout.Session;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
@@ -20,11 +29,20 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     private final SubscriptionRepository subscriptionRepository;
     private final PlanRepository planRepository;
+    private final BusinessRepository businessRepository;
+    private final StripeService stripeService;
+    private final String baseUrl;
 
     public SubscriptionServiceImpl(SubscriptionRepository subscriptionRepository,
-                                   PlanRepository planRepository) {
+                                   PlanRepository planRepository,
+                                   BusinessRepository businessRepository,
+                                   StripeService stripeService,
+                                   @Value("${app.base-url:http://localhost:8081}") String baseUrl) {
         this.subscriptionRepository = subscriptionRepository;
         this.planRepository = planRepository;
+        this.businessRepository = businessRepository;
+        this.stripeService = stripeService;
+        this.baseUrl = baseUrl;
     }
 
     @Override
@@ -70,5 +88,43 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         return planRepository.findAll().stream()
                 .filter(Plan::isActive)
                 .toList();
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public CheckoutResponse startCheckout(UUID businessId, String adminEmail, String planSlug) {
+        if (PLAN_FREE.equals(planSlug)) {
+            throw new ResourceNotFoundException("Plan", planSlug);
+        }
+
+        Plan plan = planRepository.findBySlug(planSlug)
+                .orElseThrow(() -> new ResourceNotFoundException("Plan", planSlug));
+
+        subscriptionRepository.findActiveByBusinessId(businessId).ifPresent(sub -> {
+            if (sub.getStatus() == SubscriptionStatus.ACTIVE) {
+                throw new AlreadySubscribedException();
+            }
+        });
+
+        Customer customer = stripeService.getOrCreateCustomer(adminEmail, businessId);
+
+        saveStripeCustomerId(businessId, customer.getId());
+
+        String successUrl = baseUrl + "/api/v1/billing/success?session_id={CHECKOUT_SESSION_ID}";
+        String cancelUrl = baseUrl + "/api/v1/billing/checkout/cancel";
+        String idempotencyKey = businessId + ":checkout:" + LocalDate.now(ZoneOffset.UTC);
+
+        Session session = stripeService.createCheckoutSession(
+                customer.getId(), plan.getStripePriceId(), successUrl, cancelUrl, idempotencyKey);
+
+        return new CheckoutResponse(session.getUrl());
+    }
+
+    @Transactional
+    void saveStripeCustomerId(UUID businessId, String customerId) {
+        Business business = businessRepository.findById(businessId)
+                .orElseThrow(() -> new ResourceNotFoundException("Business", businessId));
+        business.setStripeCustomerId(customerId);
+        businessRepository.save(business);
     }
 }

@@ -1,6 +1,11 @@
 package com.leonardtrinh.supportsaas.billing;
 
 import com.leonardtrinh.supportsaas.auth.PlanMisconfiguredException;
+import com.leonardtrinh.supportsaas.common.ResourceNotFoundException;
+import com.leonardtrinh.supportsaas.tenant.Business;
+import com.leonardtrinh.supportsaas.tenant.BusinessRepository;
+import com.stripe.model.Customer;
+import com.stripe.model.checkout.Session;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,6 +21,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -28,11 +34,18 @@ class SubscriptionServiceTest {
     @Mock
     private PlanRepository planRepository;
 
+    @Mock
+    private BusinessRepository businessRepository;
+
+    @Mock
+    private StripeService stripeService;
+
     private SubscriptionServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new SubscriptionServiceImpl(subscriptionRepository, planRepository);
+        service = new SubscriptionServiceImpl(subscriptionRepository, planRepository,
+                businessRepository, stripeService, "http://localhost:8081");
     }
 
     @Test
@@ -159,6 +172,107 @@ class SubscriptionServiceTest {
         assertThat(service.isActivePaid(businessId)).isFalse();
     }
 
+    // --- checkout tests ---
+
+    @Test
+    @DisplayName("startCheckout with free plan slug throws ResourceNotFoundException")
+    void startCheckout_freePlan_throwsResourceNotFound() {
+        UUID businessId = UUID.randomUUID();
+
+        assertThatThrownBy(() -> service.startCheckout(businessId, "admin@test.com", "free"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("free");
+    }
+
+    @Test
+    @DisplayName("startCheckout with unknown plan slug throws ResourceNotFoundException")
+    void startCheckout_planNotFound_throwsResourceNotFound() {
+        UUID businessId = UUID.randomUUID();
+        when(planRepository.findBySlug("unknown")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.startCheckout(businessId, "admin@test.com", "unknown"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("unknown");
+    }
+
+    @Test
+    @DisplayName("startCheckout when subscription is ACTIVE throws AlreadySubscribedException")
+    void startCheckout_alreadyActive_throwsAlreadySubscribed() {
+        UUID businessId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+
+        Plan plan = planWith(planId, "starter", "price_123");
+        when(planRepository.findBySlug("starter")).thenReturn(Optional.of(plan));
+
+        Subscription active = new Subscription();
+        active.setStatus(SubscriptionStatus.ACTIVE);
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.of(active));
+
+        assertThatThrownBy(() -> service.startCheckout(businessId, "admin@test.com", "starter"))
+                .isInstanceOf(AlreadySubscribedException.class);
+    }
+
+    @Test
+    @DisplayName("startCheckout when subscription is TRIALING proceeds to create checkout")
+    void startCheckout_trialing_createsCheckout() {
+        UUID businessId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+
+        Plan plan = planWith(planId, "starter", "price_123");
+        when(planRepository.findBySlug("starter")).thenReturn(Optional.of(plan));
+
+        Subscription trialing = new Subscription();
+        trialing.setStatus(SubscriptionStatus.TRIALING);
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.of(trialing));
+
+        Business business = new Business();
+        when(businessRepository.findById(businessId)).thenReturn(Optional.of(business));
+        when(businessRepository.save(any(Business.class))).thenReturn(business);
+
+        Customer customer = new Customer();
+        ReflectionTestUtils.setField(customer, "id", "cus_abc");
+        when(stripeService.getOrCreateCustomer(anyString(), any(UUID.class))).thenReturn(customer);
+
+        Session session = new Session();
+        ReflectionTestUtils.setField(session, "url", "https://checkout.stripe.com/pay/cs_test_trialing");
+        when(stripeService.createCheckoutSession(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(session);
+
+        CheckoutResponse response = service.startCheckout(businessId, "admin@test.com", "starter");
+
+        assertThat(response.checkoutUrl()).isEqualTo("https://checkout.stripe.com/pay/cs_test_trialing");
+    }
+
+    @Test
+    @DisplayName("startCheckout with no subscription proceeds to create checkout")
+    void startCheckout_noSubscription_createsCheckout() {
+        UUID businessId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+
+        Plan plan = planWith(planId, "pro", "price_pro");
+        when(planRepository.findBySlug("pro")).thenReturn(Optional.of(plan));
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.empty());
+
+        Business business = new Business();
+        when(businessRepository.findById(businessId)).thenReturn(Optional.of(business));
+        when(businessRepository.save(any(Business.class))).thenReturn(business);
+
+        Customer customer = new Customer();
+        ReflectionTestUtils.setField(customer, "id", "cus_xyz");
+        when(stripeService.getOrCreateCustomer(anyString(), any(UUID.class))).thenReturn(customer);
+
+        Session session = new Session();
+        ReflectionTestUtils.setField(session, "url", "https://checkout.stripe.com/pay/cs_test_new");
+        when(stripeService.createCheckoutSession(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(session);
+
+        CheckoutResponse response = service.startCheckout(businessId, "admin@test.com", "pro");
+
+        assertThat(response.checkoutUrl()).isEqualTo("https://checkout.stripe.com/pay/cs_test_new");
+    }
+
+    // --- helpers ---
+
     private Subscription subscriptionWith(UUID planId) {
         Subscription sub = new Subscription();
         sub.setPlanId(planId);
@@ -169,6 +283,14 @@ class SubscriptionServiceTest {
         Plan plan = new Plan();
         ReflectionTestUtils.setField(plan, "id", id);
         ReflectionTestUtils.setField(plan, "slug", slug);
+        return plan;
+    }
+
+    private Plan planWith(UUID id, String slug, String stripePriceId) {
+        Plan plan = new Plan();
+        ReflectionTestUtils.setField(plan, "id", id);
+        ReflectionTestUtils.setField(plan, "slug", slug);
+        ReflectionTestUtils.setField(plan, "stripePriceId", stripePriceId);
         return plan;
     }
 }
