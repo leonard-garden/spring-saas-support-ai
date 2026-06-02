@@ -6,4 +6,5 @@ import java.util.UUID;
 
 public interface KnowledgeBaseRepository extends JpaRepository<KnowledgeBase, UUID> {
     Optional<KnowledgeBase> findByBusinessId(UUID businessId);
+    long countByBusinessId(UUID businessId);
 }

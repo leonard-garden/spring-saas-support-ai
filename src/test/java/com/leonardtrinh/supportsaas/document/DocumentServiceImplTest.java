@@ -1,5 +1,7 @@
 package com.leonardtrinh.supportsaas.document;
 
+import com.leonardtrinh.supportsaas.billing.QuotaExceededException;
+import com.leonardtrinh.supportsaas.billing.QuotaService;
 import com.leonardtrinh.supportsaas.document.chunk.DocumentChunkRepository;
 import com.leonardtrinh.supportsaas.knowledgebase.KnowledgeBase;
 import com.leonardtrinh.supportsaas.knowledgebase.KnowledgeBaseRepository;
@@ -27,6 +29,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,6 +50,9 @@ class DocumentServiceImplTest {
     @Mock
     private DocumentProcessingService processingService;
 
+    @Mock
+    private QuotaService quotaService;
+
     private DocumentServiceImpl documentService;
 
     private static final UUID TENANT_ID = UUID.randomUUID();
@@ -54,13 +60,14 @@ class DocumentServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        documentService = new DocumentServiceImpl(documentRepository, chunkRepository, knowledgeBaseRepository, minioService, processingService);
+        documentService = new DocumentServiceImpl(documentRepository, chunkRepository, knowledgeBaseRepository, minioService, processingService, quotaService);
     }
 
     // --- helpers ---
 
     private KnowledgeBase makeKb() {
         KnowledgeBase kb = new KnowledgeBase();
+        ReflectionTestUtils.setField(kb, "id", KB_ID);
         kb.setBusinessId(TENANT_ID);
         return kb;
     }
@@ -91,14 +98,39 @@ class DocumentServiceImplTest {
             ctx.when(TenantContext::getTenantId).thenReturn(TENANT_ID);
 
             when(knowledgeBaseRepository.findByBusinessId(TENANT_ID)).thenReturn(Optional.of(makeKb()));
+            when(documentRepository.countByKnowledgeBaseId(KB_ID)).thenReturn(0L);
+            doNothing().when(quotaService).checkDocumentQuota(eq(TENANT_ID), eq(0L));
             when(documentRepository.save(any(Document.class))).thenAnswer(inv -> inv.getArgument(0));
 
             DocumentResponse response = documentService.upload(file);
 
             verify(minioService).upload(anyString(), any(), anyLong(), eq("application/pdf"));
             verify(documentRepository).save(any(Document.class));
+            verify(quotaService).checkDocumentQuota(TENANT_ID, 0L);
             assertThat(response.status()).isEqualTo(DocumentStatus.PENDING);
             assertThat(response.filename()).isEqualTo("report.pdf");
+        }
+    }
+
+    @Test
+    @DisplayName("upload_whenDocumentQuotaExceeded_throwsQuotaExceededException")
+    void upload_whenDocumentQuotaExceeded_throwsQuotaExceededException() {
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "report.pdf", "application/pdf", new byte[512]);
+
+        try (MockedStatic<TenantContext> ctx = mockStatic(TenantContext.class)) {
+            ctx.when(TenantContext::getTenantId).thenReturn(TENANT_ID);
+
+            when(knowledgeBaseRepository.findByBusinessId(TENANT_ID)).thenReturn(Optional.of(makeKb()));
+            when(documentRepository.countByKnowledgeBaseId(KB_ID)).thenReturn(5L);
+            doThrow(new QuotaExceededException("documents_per_kb", 5, 5))
+                    .when(quotaService).checkDocumentQuota(TENANT_ID, 5L);
+
+            assertThatThrownBy(() -> documentService.upload(file))
+                    .isInstanceOf(QuotaExceededException.class)
+                    .hasMessageContaining("documents_per_kb");
+
+            verifyNoInteractions(minioService);
         }
     }
 
@@ -143,6 +175,8 @@ class DocumentServiceImplTest {
             ctx.when(TenantContext::getTenantId).thenReturn(TENANT_ID);
 
             when(knowledgeBaseRepository.findByBusinessId(TENANT_ID)).thenReturn(Optional.of(makeKb()));
+            when(documentRepository.countByKnowledgeBaseId(KB_ID)).thenReturn(0L);
+            doNothing().when(quotaService).checkDocumentQuota(eq(TENANT_ID), eq(0L));
             doNothing().when(minioService).upload(anyString(), any(), anyLong(), anyString());
             when(documentRepository.save(any())).thenThrow(new RuntimeException("DB error"));
 
