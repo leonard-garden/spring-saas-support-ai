@@ -148,6 +148,29 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         return new CancelSubscriptionResponse(true, sub.getCurrentPeriodEnd());
     }
 
+    @Override
+    @Transactional
+    public void syncFromStripe(Subscription subscription) {
+        com.stripe.model.Subscription stripeSubscription =
+                stripeService.retrieveSubscription(subscription.getStripeSubscriptionId());
+
+        SubscriptionStatus newStatus = mapStripeStatus(stripeSubscription.getStatus());
+        subscription.setStatus(newStatus);
+        subscription.setUpdatedAt(Instant.now());
+        subscriptionRepository.save(subscription);
+    }
+
+    private SubscriptionStatus mapStripeStatus(String stripeStatus) {
+        return switch (stripeStatus) {
+            case "active" -> SubscriptionStatus.ACTIVE;
+            case "trialing" -> SubscriptionStatus.TRIALING;
+            case "past_due" -> SubscriptionStatus.PAST_DUE;
+            case "canceled", "cancelled" -> SubscriptionStatus.CANCELED;
+            case "unpaid" -> SubscriptionStatus.UNPAID;
+            default -> SubscriptionStatus.PAST_DUE;
+        };
+    }
+
     @Transactional
     void saveStripeCustomerId(UUID businessId, String customerId) {
         Business business = businessRepository.findById(businessId)

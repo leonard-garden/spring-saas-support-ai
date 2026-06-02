@@ -59,4 +59,15 @@ public class SpringMailEmailService implements EmailService {
                 + "\n\nThis link expires in 72 hours.");
         mailSender.send(message);
     }
+
+    @Override
+    public void sendTrialExpiredEmail(String toEmail) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(senderEmail);
+        message.setTo(toEmail);
+        message.setSubject("Your free trial has ended");
+        message.setText("Your 14-day Pro trial has ended. Your account has been moved to the Free plan.\n\n"
+                + "Upgrade anytime at " + appBaseUrl + "/billing to restore full access.");
+        mailSender.send(message);
+    }
 }
