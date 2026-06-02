@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -184,6 +185,46 @@ class DocumentServiceImplTest {
                     .isInstanceOf(RuntimeException.class);
 
             verify(minioService).delete(anyString());
+        }
+    }
+
+    // --- filename validation tests ---
+
+    @Test
+    @DisplayName("upload_normalFilename_succeeds")
+    void upload_normalFilename_succeeds() {
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "report.pdf", "application/pdf", new byte[512]);
+
+        try (MockedStatic<TenantContext> ctx = mockStatic(TenantContext.class)) {
+            ctx.when(TenantContext::getTenantId).thenReturn(TENANT_ID);
+
+            when(knowledgeBaseRepository.findByBusinessId(TENANT_ID)).thenReturn(Optional.of(makeKb()));
+            when(documentRepository.countByKnowledgeBaseId(KB_ID)).thenReturn(0L);
+            doNothing().when(quotaService).checkDocumentQuota(eq(TENANT_ID), eq(0L));
+            when(documentRepository.save(any(Document.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            DocumentResponse response = documentService.upload(file);
+
+            assertThat(response.filename()).isEqualTo("report.pdf");
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"../../etc/passwd", "../secret.txt", "..\\windows\\system32", "foo/../bar.pdf", "null\0byte.pdf"})
+    @DisplayName("upload_pathTraversalFilename_throwsInvalidFilenameException")
+    void upload_pathTraversalFilename_throwsInvalidFilenameException(String maliciousName) {
+        MockMultipartFile file = new MockMultipartFile(
+                "file", maliciousName, "application/pdf", new byte[512]);
+
+        try (MockedStatic<TenantContext> ctx = mockStatic(TenantContext.class)) {
+            ctx.when(TenantContext::getTenantId).thenReturn(TENANT_ID);
+
+            assertThatThrownBy(() -> documentService.upload(file))
+                    .isInstanceOf(InvalidFilenameException.class)
+                    .hasMessageContaining("path traversal");
+
+            verifyNoInteractions(minioService);
         }
     }
 

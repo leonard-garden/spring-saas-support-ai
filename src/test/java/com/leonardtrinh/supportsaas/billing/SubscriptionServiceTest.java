@@ -5,6 +5,7 @@ import com.leonardtrinh.supportsaas.common.ResourceNotFoundException;
 import com.leonardtrinh.supportsaas.tenant.Business;
 import com.leonardtrinh.supportsaas.tenant.BusinessRepository;
 import com.stripe.model.Customer;
+import com.stripe.model.SubscriptionSchedule;
 import com.stripe.model.checkout.Session;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -15,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
@@ -491,6 +493,146 @@ class SubscriptionServiceTest {
         assertThat(response.targetPlan()).isEqualTo("Pro");
         assertThat(response.message()).isNotBlank();
         verify(stripeService).updateSubscription(eq("sub_upgrade_me"), eq("price_pro"), anyString());
+    }
+
+    // --- downgrade tests ---
+
+    @Test
+    @DisplayName("downgradeSubscription throws CannotDowngradeException when no active subscription")
+    void downgradeSubscription_noActiveSubscription_throwsCannotDowngrade() {
+        UUID businessId = UUID.randomUUID();
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.downgradeSubscription(businessId, "starter"))
+                .isInstanceOf(CannotDowngradeException.class)
+                .hasMessageContaining("No active subscription");
+    }
+
+    @Test
+    @DisplayName("downgradeSubscription throws CannotDowngradeException when stripeSubscriptionId is null (unpaid trial)")
+    void downgradeSubscription_noStripeSubId_throwsCannotDowngrade() {
+        UUID businessId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+
+        Subscription sub = subscriptionWith(planId);
+        // stripeSubscriptionId is null by default
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.of(sub));
+
+        assertThatThrownBy(() -> service.downgradeSubscription(businessId, "starter"))
+                .isInstanceOf(CannotDowngradeException.class)
+                .hasMessageContaining("unpaid trial");
+    }
+
+    @Test
+    @DisplayName("downgradeSubscription throws CannotDowngradeException when a downgrade is already pending")
+    void downgradeSubscription_pendingPlanAlreadySet_throwsCannotDowngrade() {
+        UUID businessId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+
+        Subscription sub = subscriptionWith(planId);
+        sub.setStripeSubscriptionId("sub_abc");
+        sub.setPendingPlanId(UUID.randomUUID());
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.of(sub));
+
+        assertThatThrownBy(() -> service.downgradeSubscription(businessId, "starter"))
+                .isInstanceOf(CannotDowngradeException.class)
+                .hasMessageContaining("already scheduled");
+    }
+
+    @Test
+    @DisplayName("downgradeSubscription throws ResourceNotFoundException when target plan slug does not exist")
+    void downgradeSubscription_unknownPlanSlug_throwsResourceNotFound() {
+        UUID businessId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+
+        Subscription sub = subscriptionWith(planId);
+        sub.setStripeSubscriptionId("sub_abc");
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.of(sub));
+        when(planRepository.findBySlug("ghost")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.downgradeSubscription(businessId, "ghost"))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("downgradeSubscription throws CannotDowngradeException when target plan price equals current plan price")
+    void downgradeSubscription_samePricePlan_throwsCannotDowngrade() {
+        UUID businessId = UUID.randomUUID();
+        UUID currentPlanId = UUID.randomUUID();
+        UUID targetPlanId = UUID.randomUUID();
+
+        Subscription sub = subscriptionWith(currentPlanId);
+        sub.setStripeSubscriptionId("sub_abc");
+
+        Plan currentPlan = planWithPrice(currentPlanId, "pro", "price_pro", new BigDecimal("99.00"));
+        Plan targetPlan  = planWithPrice(targetPlanId, "pro2", "price_pro2", new BigDecimal("99.00"));
+
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.of(sub));
+        when(planRepository.findBySlug("pro2")).thenReturn(Optional.of(targetPlan));
+        when(planRepository.findById(currentPlanId)).thenReturn(Optional.of(currentPlan));
+
+        assertThatThrownBy(() -> service.downgradeSubscription(businessId, "pro2"))
+                .isInstanceOf(CannotDowngradeException.class)
+                .hasMessageContaining("lower than current plan price");
+    }
+
+    @Test
+    @DisplayName("downgradeSubscription throws CannotDowngradeException when target plan price is higher than current plan price")
+    void downgradeSubscription_higherPricePlan_throwsCannotDowngrade() {
+        UUID businessId = UUID.randomUUID();
+        UUID currentPlanId = UUID.randomUUID();
+        UUID targetPlanId = UUID.randomUUID();
+
+        Subscription sub = subscriptionWith(currentPlanId);
+        sub.setStripeSubscriptionId("sub_abc");
+
+        Plan currentPlan = planWithPrice(currentPlanId, "starter", "price_starter", new BigDecimal("29.00"));
+        Plan targetPlan  = planWithPrice(targetPlanId, "pro",     "price_pro",     new BigDecimal("99.00"));
+
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.of(sub));
+        when(planRepository.findBySlug("pro")).thenReturn(Optional.of(targetPlan));
+        when(planRepository.findById(currentPlanId)).thenReturn(Optional.of(currentPlan));
+
+        assertThatThrownBy(() -> service.downgradeSubscription(businessId, "pro"))
+                .isInstanceOf(CannotDowngradeException.class)
+                .hasMessageContaining("lower than current plan price");
+    }
+
+    @Test
+    @DisplayName("downgradeSubscription calls StripeService.scheduleSubscriptionUpdate, sets pendingPlanId, and returns DowngradeResponse")
+    void downgradeSubscription_happyPath_schedulesAndReturnsPendingPlan() {
+        UUID businessId = UUID.randomUUID();
+        UUID currentPlanId = UUID.randomUUID();
+        UUID targetPlanId = UUID.randomUUID();
+        Instant periodEnd = Instant.parse("2026-07-01T00:00:00Z");
+
+        Subscription sub = subscriptionWith(currentPlanId);
+        sub.setStripeSubscriptionId("sub_downgrade_me");
+        sub.setCurrentPeriodEnd(periodEnd);
+
+        Plan currentPlan = planWithPrice(currentPlanId, "pro",     "price_pro",     new BigDecimal("99.00"));
+        Plan targetPlan  = planWithPrice(targetPlanId, "starter", "price_starter", new BigDecimal("29.00"));
+        ReflectionTestUtils.setField(targetPlan, "name", "Starter");
+
+        SubscriptionSchedule schedule = new SubscriptionSchedule();
+        when(subscriptionRepository.findActiveByBusinessId(businessId))
+                .thenReturn(Optional.of(sub));
+        when(planRepository.findBySlug("starter")).thenReturn(Optional.of(targetPlan));
+        when(planRepository.findById(currentPlanId)).thenReturn(Optional.of(currentPlan));
+        when(stripeService.scheduleSubscriptionUpdate(anyString(), anyString(), anyString()))
+                .thenReturn(schedule);
+        when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        DowngradeResponse response = service.downgradeSubscription(businessId, "starter");
+
+        assertThat(response.targetPlan()).isEqualTo("Starter");
+        assertThat(response.effectiveAt()).isEqualTo(periodEnd);
+        assertThat(response.message()).isNotBlank();
+        verify(stripeService).scheduleSubscriptionUpdate(eq("sub_downgrade_me"), eq("price_starter"), anyString());
+
+        ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+        verify(subscriptionRepository).save(captor.capture());
+        assertThat(captor.getValue().getPendingPlanId()).isEqualTo(targetPlanId);
     }
 
     // --- helpers ---
