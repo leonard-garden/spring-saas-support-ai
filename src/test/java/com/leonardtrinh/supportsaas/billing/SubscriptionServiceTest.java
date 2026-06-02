@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -356,6 +357,25 @@ class SubscriptionServiceTest {
         assertThat(response.cancelAtPeriodEnd()).isTrue();
         assertThat(response.currentPeriodEnd()).isEqualTo(periodEnd);
         verify(stripeService).cancelAtPeriodEnd(anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("createTrial sets trialEndsAt approximately 14 days from now")
+    void createTrial_setsTrialEndsAt14DaysFromNow() {
+        UUID businessId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+
+        Plan pro = planWith(planId, "pro");
+        when(planRepository.findBySlug("pro")).thenReturn(Optional.of(pro));
+        when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Instant before = Instant.now().plus(14, ChronoUnit.DAYS).minusSeconds(5);
+        Subscription result = service.createTrial(businessId);
+        Instant after = Instant.now().plus(14, ChronoUnit.DAYS).plusSeconds(5);
+
+        assertThat(result.getTrialEndsAt()).isAfter(before).isBefore(after);
+        assertThat(result.getCurrentPeriodStart()).isNotNull();
+        assertThat(result.getCurrentPeriodEnd()).isNotNull();
     }
 
     // --- helpers ---
