@@ -11,4 +11,6 @@ public interface SubscriptionService {
     boolean isActivePaid(UUID businessId);
     List<Plan> getActivePlans();
     CheckoutResponse startCheckout(UUID businessId, String adminEmail, String planSlug);
+
+    CancelSubscriptionResponse cancelSubscription(UUID businessId);
 }
