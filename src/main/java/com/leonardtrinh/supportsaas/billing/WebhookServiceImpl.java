@@ -5,6 +5,7 @@ import com.stripe.model.Event;
 import com.stripe.model.Invoice;
 import com.stripe.model.Invoice.Parent;
 import com.stripe.model.StripeObject;
+import com.stripe.model.checkout.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -23,18 +24,21 @@ public class WebhookServiceImpl implements WebhookService {
     private final SubscriptionService subscriptionService;
     private final AsyncEmailSender asyncEmailSender;
     private final PlanRepository planRepository;
+    private final StripeService stripeService;
 
     public WebhookServiceImpl(
             ProcessedWebhookEventRepository processedWebhookEventRepository,
             SubscriptionRepository subscriptionRepository,
             SubscriptionService subscriptionService,
             AsyncEmailSender asyncEmailSender,
-            PlanRepository planRepository) {
+            PlanRepository planRepository,
+            StripeService stripeService) {
         this.processedWebhookEventRepository = processedWebhookEventRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.subscriptionService = subscriptionService;
         this.asyncEmailSender = asyncEmailSender;
         this.planRepository = planRepository;
+        this.stripeService = stripeService;
     }
 
     @Override
@@ -58,13 +62,70 @@ public class WebhookServiceImpl implements WebhookService {
             case "customer.subscription.created" -> handleSubscriptionEvent(event);
             case "customer.subscription.updated" -> handleSubscriptionUpdated(event);
             case "customer.subscription.deleted" -> handleSubscriptionDeleted(event);
-            case "checkout.session.completed" -> log.debug(
-                    "webhook_checkout_completed event_id={} — activation handled by reconciliation scheduler",
-                    eventId);
+            case "checkout.session.completed" -> handleCheckoutCompleted(event);
             case "invoice.payment_succeeded" -> handleInvoicePaymentSucceeded(event);
             case "invoice.payment_failed" -> handleInvoicePaymentFailed(event);
             default -> log.debug("webhook_event_unhandled event_id={} type={}", eventId, eventType);
         }
+    }
+
+    private void handleCheckoutCompleted(Event event) {
+        Optional<StripeObject> objectOpt = event.getDataObjectDeserializer().getObject();
+        if (objectOpt.isEmpty()) {
+            log.warn("webhook_checkout_deserialization_failed event_id={}", event.getId());
+            return;
+        }
+
+        if (!(objectOpt.get() instanceof Session session)) {
+            log.warn("webhook_checkout_unexpected_type event_id={} expected=Session", event.getId());
+            return;
+        }
+
+        String stripeSubId = session.getSubscription();
+        String stripeCustomerId = session.getCustomer();
+
+        if (stripeSubId == null || stripeCustomerId == null) {
+            log.warn("webhook_checkout_missing_ids event_id={} stripeSubId={} stripeCustomerId={}",
+                    event.getId(), stripeSubId, stripeCustomerId);
+            return;
+        }
+
+        Subscription sub = subscriptionRepository.findByStripeCustomerId(stripeCustomerId)
+                .orElse(null);
+        if (sub == null) {
+            log.warn("webhook_checkout_subscription_not_found event_id={} stripe_customer_id={}",
+                    event.getId(), stripeCustomerId);
+            return;
+        }
+
+        com.stripe.model.Subscription stripeSub = stripeService.retrieveSubscription(stripeSubId);
+
+        com.stripe.model.SubscriptionItem firstItem =
+                (stripeSub.getItems() != null && !stripeSub.getItems().getData().isEmpty())
+                        ? stripeSub.getItems().getData().get(0)
+                        : null;
+
+        if (firstItem != null && firstItem.getPrice() != null) {
+            String stripePriceId = firstItem.getPrice().getId();
+            planRepository.findByStripePriceId(stripePriceId)
+                    .ifPresent(plan -> sub.setPlanId(plan.getId()));
+        }
+
+        sub.setStripeSubscriptionId(stripeSubId);
+        sub.setStripeCustomerId(stripeCustomerId);
+        sub.setStatus(SubscriptionStatus.ACTIVE);
+        if (firstItem != null && firstItem.getCurrentPeriodStart() != null) {
+            sub.setCurrentPeriodStart(Instant.ofEpochSecond(firstItem.getCurrentPeriodStart()));
+        }
+        if (firstItem != null && firstItem.getCurrentPeriodEnd() != null) {
+            sub.setCurrentPeriodEnd(Instant.ofEpochSecond(firstItem.getCurrentPeriodEnd()));
+        }
+        sub.setUpdatedAt(Instant.now());
+
+        subscriptionRepository.save(sub);
+
+        log.info("webhook_checkout_activated event_id={} stripe_sub_id={} stripe_customer_id={}",
+                event.getId(), stripeSubId, stripeCustomerId);
     }
 
     private void handleInvoicePaymentSucceeded(Event event) {

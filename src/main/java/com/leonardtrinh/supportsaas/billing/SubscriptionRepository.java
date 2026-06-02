@@ -23,6 +23,11 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
     @Query(value = "SELECT * FROM subscriptions WHERE stripe_subscription_id = :stripeSubscriptionId LIMIT 1", nativeQuery = true)
     Optional<Subscription> findByStripeSubscriptionId(@Param("stripeSubscriptionId") String stripeSubscriptionId);
 
+    // Native query — bypasses tenant filter; used by checkout.session.completed handler to find
+    // the tenant's subscription via the Stripe customer ID set during checkout flow
+    @Query(value = "SELECT * FROM subscriptions WHERE stripe_customer_id = :stripeCustomerId ORDER BY created_at DESC LIMIT 1", nativeQuery = true)
+    Optional<Subscription> findByStripeCustomerId(@Param("stripeCustomerId") String stripeCustomerId);
+
     // Native query — bypasses tenant filter; returns the owner email for a given tenant's subscription
     @Query(value = """
             SELECT m.email FROM members m

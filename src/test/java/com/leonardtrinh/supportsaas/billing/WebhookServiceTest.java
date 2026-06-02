@@ -4,9 +4,10 @@ import com.leonardtrinh.supportsaas.email.AsyncEmailSender;
 import com.stripe.model.Event;
 import com.stripe.model.EventDataObjectDeserializer;
 import com.stripe.model.Invoice;
+import com.stripe.model.Price;
 import com.stripe.model.SubscriptionItem;
 import com.stripe.model.SubscriptionItemCollection;
-import com.stripe.model.Price;
+import com.stripe.model.checkout.Session;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
 import java.util.List;
@@ -48,6 +50,9 @@ class WebhookServiceTest {
     @Mock
     private PlanRepository planRepository;
 
+    @Mock
+    private StripeService stripeService;
+
     private WebhookServiceImpl webhookService;
 
     @BeforeEach
@@ -57,7 +62,8 @@ class WebhookServiceTest {
                 subscriptionRepository,
                 subscriptionService,
                 asyncEmailSender,
-                planRepository);
+                planRepository,
+                stripeService);
     }
 
     // -----------------------------------------------------------------------
@@ -79,14 +85,14 @@ class WebhookServiceTest {
     @Test
     @DisplayName("handle — records event before delegating on first delivery")
     void handle_newEvent_savesProcessedRecord() {
-        Event event = mockEvent("evt_002", "checkout.session.completed");
+        Event event = mockEvent("evt_002", "payment_intent.succeeded");
         when(processedWebhookEventRepository.existsByStripeEventId("evt_002")).thenReturn(false);
 
         webhookService.handle(event);
 
         verify(processedWebhookEventRepository).save(argThat(pwe ->
                 "evt_002".equals(pwe.getStripeEventId())
-                && "checkout.session.completed".equals(pwe.getEventType())));
+                && "payment_intent.succeeded".equals(pwe.getEventType())));
     }
 
     // -----------------------------------------------------------------------
@@ -298,6 +304,126 @@ class WebhookServiceTest {
         webhookService.handle(event);
 
         verify(subscriptionRepository, never()).save(any());
+    }
+
+    // -----------------------------------------------------------------------
+    // checkout.session.completed
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("handle — checkout.session.completed activates subscription with period dates and plan")
+    void handle_checkoutCompleted_activatesSubscription() {
+        String stripeSubId = "sub_checkout_001";
+        String stripeCustomerId = "cus_checkout_001";
+        UUID planId = UUID.randomUUID();
+        UUID newPlanId = UUID.randomUUID();
+        long periodStart = 1_700_000_000L;
+        long periodEnd   = 1_702_592_000L;
+
+        Event event = mockCheckoutSessionEvent("evt_checkout_001", stripeSubId, stripeCustomerId);
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_checkout_001")).thenReturn(false);
+
+        Subscription localSub = new Subscription();
+        localSub.setPlanId(planId);
+        when(subscriptionRepository.findByStripeCustomerId(stripeCustomerId))
+                .thenReturn(Optional.of(localSub));
+
+        com.stripe.model.Subscription stripeSub = mockStripeSubscription(stripeSubId, "price_pro", periodStart, periodEnd);
+        when(stripeService.retrieveSubscription(stripeSubId)).thenReturn(stripeSub);
+
+        Plan plan = new Plan();
+        ReflectionTestUtils.setField(plan, "id", newPlanId);
+        when(planRepository.findByStripePriceId("price_pro")).thenReturn(Optional.of(plan));
+        when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        webhookService.handle(event);
+
+        ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+        verify(subscriptionRepository).save(captor.capture());
+        Subscription saved = captor.getValue();
+
+        assertThat(saved.getStatus()).isEqualTo(SubscriptionStatus.ACTIVE);
+        assertThat(saved.getStripeSubscriptionId()).isEqualTo(stripeSubId);
+        assertThat(saved.getStripeCustomerId()).isEqualTo(stripeCustomerId);
+        assertThat(saved.getPlanId()).isEqualTo(newPlanId);
+        assertThat(saved.getCurrentPeriodStart().getEpochSecond()).isEqualTo(periodStart);
+        assertThat(saved.getCurrentPeriodEnd().getEpochSecond()).isEqualTo(periodEnd);
+        assertThat(saved.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("handle — checkout.session.completed keeps existing planId when Stripe price not matched")
+    void handle_checkoutCompleted_unknownPriceId_keepsExistingPlanId() {
+        String stripeSubId = "sub_checkout_002";
+        String stripeCustomerId = "cus_checkout_002";
+        UUID existingPlanId = UUID.randomUUID();
+        long periodStart = 1_700_000_000L;
+        long periodEnd   = 1_702_592_000L;
+
+        Event event = mockCheckoutSessionEvent("evt_checkout_002", stripeSubId, stripeCustomerId);
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_checkout_002")).thenReturn(false);
+
+        Subscription localSub = new Subscription();
+        localSub.setPlanId(existingPlanId);
+        when(subscriptionRepository.findByStripeCustomerId(stripeCustomerId))
+                .thenReturn(Optional.of(localSub));
+
+        com.stripe.model.Subscription stripeSub = mockStripeSubscription(stripeSubId, "price_unknown", periodStart, periodEnd);
+        when(stripeService.retrieveSubscription(stripeSubId)).thenReturn(stripeSub);
+        when(planRepository.findByStripePriceId("price_unknown")).thenReturn(Optional.empty());
+        when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        webhookService.handle(event);
+
+        ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+        verify(subscriptionRepository).save(captor.capture());
+        assertThat(captor.getValue().getPlanId()).isEqualTo(existingPlanId);
+        assertThat(captor.getValue().getStatus()).isEqualTo(SubscriptionStatus.ACTIVE);
+    }
+
+    @Test
+    @DisplayName("handle — checkout.session.completed skips when local subscription not found by customer ID")
+    void handle_checkoutCompleted_noLocalSubscription_skips() {
+        String stripeSubId = "sub_checkout_003";
+        String stripeCustomerId = "cus_checkout_003";
+
+        Event event = mockCheckoutSessionEvent("evt_checkout_003", stripeSubId, stripeCustomerId);
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_checkout_003")).thenReturn(false);
+        when(subscriptionRepository.findByStripeCustomerId(stripeCustomerId)).thenReturn(Optional.empty());
+
+        webhookService.handle(event);
+
+        verify(subscriptionRepository, never()).save(any());
+        verify(stripeService, never()).retrieveSubscription(any());
+    }
+
+    @Test
+    @DisplayName("handle — checkout.session.completed skips when deserialization fails")
+    void handle_checkoutCompleted_deserializationFails_skips() {
+        Event event = mock(Event.class);
+        when(event.getId()).thenReturn("evt_checkout_004");
+        when(event.getType()).thenReturn("checkout.session.completed");
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_checkout_004")).thenReturn(false);
+
+        EventDataObjectDeserializer deserializer = mock(EventDataObjectDeserializer.class);
+        when(deserializer.getObject()).thenReturn(Optional.empty());
+        when(event.getDataObjectDeserializer()).thenReturn(deserializer);
+
+        webhookService.handle(event);
+
+        verify(subscriptionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("handle — checkout.session.completed skips when stripeSubId is null")
+    void handle_checkoutCompleted_nullStripeSubId_skips() {
+        Event event = mockCheckoutSessionEvent("evt_checkout_005", null, "cus_checkout_005");
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_checkout_005")).thenReturn(false);
+
+        webhookService.handle(event);
+
+        verify(subscriptionRepository, never()).save(any());
+        verify(subscriptionRepository, never()).findByStripeCustomerId(any());
     }
 
     // -----------------------------------------------------------------------
@@ -601,6 +727,40 @@ class WebhookServiceTest {
         when(event.getType()).thenReturn(type);
         when(event.getDataObjectDeserializer()).thenReturn(deserializer);
         return event;
+    }
+
+    private Event mockCheckoutSessionEvent(String id, String stripeSubId, String stripeCustomerId) {
+        Session session = mock(Session.class);
+        when(session.getSubscription()).thenReturn(stripeSubId);
+        when(session.getCustomer()).thenReturn(stripeCustomerId);
+
+        EventDataObjectDeserializer deserializer = mock(EventDataObjectDeserializer.class);
+        when(deserializer.getObject()).thenReturn(Optional.of(session));
+
+        Event event = mock(Event.class);
+        when(event.getId()).thenReturn(id);
+        when(event.getType()).thenReturn("checkout.session.completed");
+        when(event.getDataObjectDeserializer()).thenReturn(deserializer);
+        return event;
+    }
+
+    private com.stripe.model.Subscription mockStripeSubscription(
+            String subId, String priceId, long periodStart, long periodEnd) {
+        com.stripe.model.Price price = mock(com.stripe.model.Price.class);
+        lenient().when(price.getId()).thenReturn(priceId);
+
+        SubscriptionItem item = mock(SubscriptionItem.class);
+        lenient().when(item.getPrice()).thenReturn(price);
+        lenient().when(item.getCurrentPeriodStart()).thenReturn(periodStart);
+        lenient().when(item.getCurrentPeriodEnd()).thenReturn(periodEnd);
+
+        SubscriptionItemCollection items = mock(SubscriptionItemCollection.class);
+        lenient().when(items.getData()).thenReturn(List.of(item));
+
+        com.stripe.model.Subscription stripeSub = mock(com.stripe.model.Subscription.class);
+        lenient().when(stripeSub.getId()).thenReturn(subId);
+        lenient().when(stripeSub.getItems()).thenReturn(items);
+        return stripeSub;
     }
 
     /**
