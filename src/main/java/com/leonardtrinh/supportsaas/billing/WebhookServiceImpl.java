@@ -55,9 +55,9 @@ public class WebhookServiceImpl implements WebhookService {
         log.info("webhook_event_received event_id={} type={}", eventId, eventType);
 
         switch (eventType) {
-            case "customer.subscription.created",
-                 "customer.subscription.deleted" -> handleSubscriptionEvent(event);
+            case "customer.subscription.created" -> handleSubscriptionEvent(event);
             case "customer.subscription.updated" -> handleSubscriptionUpdated(event);
+            case "customer.subscription.deleted" -> handleSubscriptionDeleted(event);
             case "checkout.session.completed" -> log.debug(
                     "webhook_checkout_completed event_id={} — activation handled by reconciliation scheduler",
                     eventId);
@@ -158,6 +158,40 @@ public class WebhookServiceImpl implements WebhookService {
                         },
                         () -> log.debug("webhook_subscription_not_found stripe_sub_id={}", stripeSubId)
                 );
+    }
+
+    private void handleSubscriptionDeleted(Event event) {
+        Optional<StripeObject> objectOpt = event.getDataObjectDeserializer().getObject();
+        if (objectOpt.isEmpty()) {
+            log.warn("webhook_deserialization_failed event_id={} type={}", event.getId(), event.getType());
+            return;
+        }
+
+        if (!(objectOpt.get() instanceof com.stripe.model.Subscription stripeSubscription)) {
+            log.warn("webhook_unexpected_type event_id={} expected=Subscription", event.getId());
+            return;
+        }
+
+        String stripeSubId = stripeSubscription.getId();
+        Optional<Subscription> localSubOpt = subscriptionRepository.findByStripeSubscriptionId(stripeSubId);
+        if (localSubOpt.isEmpty()) {
+            log.debug("webhook_subscription_not_found stripe_sub_id={}", stripeSubId);
+            return;
+        }
+
+        Plan freePlan = planRepository.findBySlug("free").orElseThrow(
+                () -> new IllegalStateException("Free plan not found — database seed missing"));
+
+        Subscription sub = localSubOpt.get();
+        sub.setPlanId(freePlan.getId());
+        sub.setStatus(SubscriptionStatus.ACTIVE);
+        sub.setCancelAtPeriodEnd(false);
+        sub.setStripeSubscriptionId(null);
+        sub.setUpdatedAt(Instant.now());
+
+        subscriptionRepository.save(sub);
+        log.info("webhook_subscription_deleted_downgraded stripe_sub_id={} business_id={}",
+                stripeSubId, sub.getBusinessId());
     }
 
     /**

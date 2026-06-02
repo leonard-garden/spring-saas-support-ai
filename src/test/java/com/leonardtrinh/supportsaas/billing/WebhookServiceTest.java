@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.lenient;
@@ -206,6 +207,94 @@ class WebhookServiceTest {
         Event event = mockEventWithEmptyDeserializer("evt_012", "invoice.payment_succeeded");
         when(processedWebhookEventRepository.existsByStripeEventId("evt_012")).thenReturn(false);
 
+        webhookService.handle(event);
+
+        verify(subscriptionRepository, never()).save(any());
+    }
+
+    // -----------------------------------------------------------------------
+    // customer.subscription.deleted — downgrade to Free
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("handle — subscription.deleted downgrades to Free plan with status ACTIVE")
+    void handle_subscriptionDeleted_downgradesToFreePlan() {
+        String stripeSubId = "sub_deleted_001";
+        Event event = mockSubscriptionEvent("evt_013", "customer.subscription.deleted", stripeSubId);
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_013")).thenReturn(false);
+
+        Subscription localSub = new Subscription();
+        localSub.setStatus(SubscriptionStatus.PAST_DUE);
+        localSub.setCancelAtPeriodEnd(true);
+        localSub.setStripeSubscriptionId(stripeSubId);
+        when(subscriptionRepository.findByStripeSubscriptionId(stripeSubId))
+                .thenReturn(Optional.of(localSub));
+
+        UUID freePlanId = UUID.randomUUID();
+        Plan freePlan = mock(Plan.class);
+        when(freePlan.getId()).thenReturn(freePlanId);
+        when(planRepository.findBySlug("free")).thenReturn(Optional.of(freePlan));
+
+        webhookService.handle(event);
+
+        ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+        verify(subscriptionRepository).save(captor.capture());
+        Subscription saved = captor.getValue();
+        assertThat(saved.getPlanId()).isEqualTo(freePlanId);
+        assertThat(saved.getStatus()).isEqualTo(SubscriptionStatus.ACTIVE);
+        assertThat(saved.isCancelAtPeriodEnd()).isFalse();
+        assertThat(saved.getStripeSubscriptionId()).isNull();
+        assertThat(saved.getUpdatedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("handle — subscription.deleted skips downgrade when local subscription not found")
+    void handle_subscriptionDeleted_noLocalMatch_noSave() {
+        String stripeSubId = "sub_deleted_unknown";
+        Event event = mockSubscriptionEvent("evt_014", "customer.subscription.deleted", stripeSubId);
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_014")).thenReturn(false);
+
+        when(subscriptionRepository.findByStripeSubscriptionId(stripeSubId))
+                .thenReturn(Optional.empty());
+
+        webhookService.handle(event);
+
+        verify(subscriptionRepository, never()).save(any());
+        verify(planRepository, never()).findBySlug(any());
+    }
+
+    @Test
+    @DisplayName("handle — subscription.deleted throws when Free plan missing from database")
+    void handle_subscriptionDeleted_freePlanMissing_throwsIllegalState() {
+        String stripeSubId = "sub_deleted_002";
+        Event event = mockSubscriptionEvent("evt_015", "customer.subscription.deleted", stripeSubId);
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_015")).thenReturn(false);
+
+        Subscription localSub = new Subscription();
+        localSub.setStatus(SubscriptionStatus.ACTIVE);
+        when(subscriptionRepository.findByStripeSubscriptionId(stripeSubId))
+                .thenReturn(Optional.of(localSub));
+
+        when(planRepository.findBySlug("free")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> webhookService.handle(event))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Free plan not found");
+    }
+
+    @Test
+    @DisplayName("handle — subscription.deleted with deserialization failure logs warning without crash")
+    void handle_subscriptionDeleted_deserializationFails_noException() {
+        Event event = mock(Event.class);
+        when(event.getId()).thenReturn("evt_016");
+        when(event.getType()).thenReturn("customer.subscription.deleted");
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_016")).thenReturn(false);
+
+        EventDataObjectDeserializer deserializer = mock(EventDataObjectDeserializer.class);
+        when(deserializer.getObject()).thenReturn(Optional.empty());
+        when(event.getDataObjectDeserializer()).thenReturn(deserializer);
+
+        // Should not throw
         webhookService.handle(event);
 
         verify(subscriptionRepository, never()).save(any());
