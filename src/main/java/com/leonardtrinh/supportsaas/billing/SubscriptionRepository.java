@@ -19,6 +19,10 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
 
     List<Subscription> findAllByStatusIn(List<SubscriptionStatus> statuses);
 
+    // Native query — bypasses tenant filter; used by webhook handler to locate subscription by Stripe ID
+    @Query(value = "SELECT * FROM subscriptions WHERE stripe_subscription_id = :stripeSubscriptionId LIMIT 1", nativeQuery = true)
+    Optional<Subscription> findByStripeSubscriptionId(@Param("stripeSubscriptionId") String stripeSubscriptionId);
+
     // Native query — bypasses tenant filter; returns the owner email for a given tenant's subscription
     @Query(value = """
             SELECT m.email FROM members m
