@@ -35,4 +35,10 @@ public class AsyncEmailSenderImpl implements AsyncEmailSender {
     public void sendTrialExpiredAsync(String email) {
         emailService.sendTrialExpiredEmail(email);
     }
+
+    @Override
+    @Async("taskExecutor")
+    public void sendPaymentFailedAsync(String email) {
+        emailService.sendPaymentFailedEmail(email);
+    }
 }
