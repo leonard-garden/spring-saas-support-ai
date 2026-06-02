@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.Optional;
 
 @Service
@@ -17,14 +18,17 @@ public class WebhookServiceImpl implements WebhookService {
     private final ProcessedWebhookEventRepository processedWebhookEventRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionService subscriptionService;
+    private final PlanRepository planRepository;
 
     public WebhookServiceImpl(
             ProcessedWebhookEventRepository processedWebhookEventRepository,
             SubscriptionRepository subscriptionRepository,
-            SubscriptionService subscriptionService) {
+            SubscriptionService subscriptionService,
+            PlanRepository planRepository) {
         this.processedWebhookEventRepository = processedWebhookEventRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.subscriptionService = subscriptionService;
+        this.planRepository = planRepository;
     }
 
     @Override
@@ -46,8 +50,8 @@ public class WebhookServiceImpl implements WebhookService {
 
         switch (eventType) {
             case "customer.subscription.created",
-                 "customer.subscription.updated",
-                 "customer.subscription.deleted" -> handleSubscriptionEvent(event);
+                 "customer.subscription.updated" -> handleSubscriptionEvent(event);
+            case "customer.subscription.deleted" -> handleSubscriptionDeleted(event);
             case "checkout.session.completed" -> log.debug(
                     "webhook_checkout_completed event_id={} — activation handled by reconciliation scheduler",
                     eventId);
@@ -76,5 +80,39 @@ public class WebhookServiceImpl implements WebhookService {
                         },
                         () -> log.debug("webhook_subscription_not_found stripe_sub_id={}", stripeSubId)
                 );
+    }
+
+    private void handleSubscriptionDeleted(Event event) {
+        Optional<StripeObject> objectOpt = event.getDataObjectDeserializer().getObject();
+        if (objectOpt.isEmpty()) {
+            log.warn("webhook_deserialization_failed event_id={} type={}", event.getId(), event.getType());
+            return;
+        }
+
+        if (!(objectOpt.get() instanceof com.stripe.model.Subscription stripeSubscription)) {
+            log.warn("webhook_unexpected_type event_id={} expected=Subscription", event.getId());
+            return;
+        }
+
+        String stripeSubId = stripeSubscription.getId();
+        Optional<Subscription> localSubOpt = subscriptionRepository.findByStripeSubscriptionId(stripeSubId);
+        if (localSubOpt.isEmpty()) {
+            log.debug("webhook_subscription_not_found stripe_sub_id={}", stripeSubId);
+            return;
+        }
+
+        Plan freePlan = planRepository.findBySlug("free").orElseThrow(
+                () -> new IllegalStateException("Free plan not found — database seed missing"));
+
+        Subscription sub = localSubOpt.get();
+        sub.setPlanId(freePlan.getId());
+        sub.setStatus(SubscriptionStatus.ACTIVE);
+        sub.setCancelAtPeriodEnd(false);
+        sub.setStripeSubscriptionId(null);
+        sub.setUpdatedAt(Instant.now());
+
+        subscriptionRepository.save(sub);
+        log.info("webhook_subscription_deleted_downgraded stripe_sub_id={} business_id={}",
+                stripeSubId, sub.getBusinessId());
     }
 }
