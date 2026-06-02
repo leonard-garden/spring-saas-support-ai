@@ -33,8 +33,20 @@ public class Subscription extends TenantEntity {
     @Column(name = "stripe_subscription_id")
     private String stripeSubscriptionId;
 
+    @Column(name = "stripe_customer_id")
+    private String stripeCustomerId;
+
+    @Column(name = "pending_plan_id")
+    private UUID pendingPlanId;
+
+    @Column(name = "cancel_at_period_end", nullable = false)
+    private boolean cancelAtPeriodEnd = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt = Instant.now();
 
     public UUID getId() { return id; }
     public UUID getPlanId() { return planId; }
@@ -43,7 +55,11 @@ public class Subscription extends TenantEntity {
     public Instant getCurrentPeriodStart() { return currentPeriodStart; }
     public Instant getCurrentPeriodEnd() { return currentPeriodEnd; }
     public String getStripeSubscriptionId() { return stripeSubscriptionId; }
+    public String getStripeCustomerId() { return stripeCustomerId; }
+    public UUID getPendingPlanId() { return pendingPlanId; }
+    public boolean isCancelAtPeriodEnd() { return cancelAtPeriodEnd; }
     public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
 
     public void setPlanId(UUID planId) { this.planId = planId; }
     public void setStatus(SubscriptionStatus status) { this.status = status; }
@@ -51,6 +67,10 @@ public class Subscription extends TenantEntity {
     public void setCurrentPeriodStart(Instant currentPeriodStart) { this.currentPeriodStart = currentPeriodStart; }
     public void setCurrentPeriodEnd(Instant currentPeriodEnd) { this.currentPeriodEnd = currentPeriodEnd; }
     public void setStripeSubscriptionId(String stripeSubscriptionId) { this.stripeSubscriptionId = stripeSubscriptionId; }
+    public void setStripeCustomerId(String stripeCustomerId) { this.stripeCustomerId = stripeCustomerId; }
+    public void setPendingPlanId(UUID pendingPlanId) { this.pendingPlanId = pendingPlanId; }
+    public void setCancelAtPeriodEnd(boolean cancelAtPeriodEnd) { this.cancelAtPeriodEnd = cancelAtPeriodEnd; }
+    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 
     @Override
     public void setBusinessId(UUID businessId) {
