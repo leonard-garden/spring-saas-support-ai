@@ -1,6 +1,9 @@
 package com.leonardtrinh.supportsaas.billing;
 
+import com.leonardtrinh.supportsaas.email.AsyncEmailSender;
 import com.stripe.model.Event;
+import com.stripe.model.Invoice;
+import com.stripe.model.Invoice.Parent;
 import com.stripe.model.StripeObject;
 import com.stripe.model.checkout.Session;
 import org.slf4j.Logger;
@@ -19,6 +22,7 @@ public class WebhookServiceImpl implements WebhookService {
     private final ProcessedWebhookEventRepository processedWebhookEventRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionService subscriptionService;
+    private final AsyncEmailSender asyncEmailSender;
     private final PlanRepository planRepository;
     private final StripeService stripeService;
 
@@ -26,11 +30,13 @@ public class WebhookServiceImpl implements WebhookService {
             ProcessedWebhookEventRepository processedWebhookEventRepository,
             SubscriptionRepository subscriptionRepository,
             SubscriptionService subscriptionService,
+            AsyncEmailSender asyncEmailSender,
             PlanRepository planRepository,
             StripeService stripeService) {
         this.processedWebhookEventRepository = processedWebhookEventRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.subscriptionService = subscriptionService;
+        this.asyncEmailSender = asyncEmailSender;
         this.planRepository = planRepository;
         this.stripeService = stripeService;
     }
@@ -57,6 +63,8 @@ public class WebhookServiceImpl implements WebhookService {
             case "customer.subscription.updated" -> handleSubscriptionUpdated(event);
             case "customer.subscription.deleted" -> handleSubscriptionDeleted(event);
             case "checkout.session.completed" -> handleCheckoutCompleted(event);
+            case "invoice.payment_succeeded" -> handleInvoicePaymentSucceeded(event);
+            case "invoice.payment_failed" -> handleInvoicePaymentFailed(event);
             default -> log.debug("webhook_event_unhandled event_id={} type={}", eventId, eventType);
         }
     }
@@ -92,13 +100,11 @@ public class WebhookServiceImpl implements WebhookService {
 
         com.stripe.model.Subscription stripeSub = stripeService.retrieveSubscription(stripeSubId);
 
-        // In Stripe SDK v29+, period and price data live on SubscriptionItem, not Subscription
         com.stripe.model.SubscriptionItem firstItem =
                 (stripeSub.getItems() != null && !stripeSub.getItems().getData().isEmpty())
                         ? stripeSub.getItems().getData().get(0)
                         : null;
 
-        // Resolve planId from Stripe price ID — fall back to existing planId if not matched
         if (firstItem != null && firstItem.getPrice() != null) {
             String stripePriceId = firstItem.getPrice().getId();
             planRepository.findByStripePriceId(stripePriceId)
@@ -120,6 +126,76 @@ public class WebhookServiceImpl implements WebhookService {
 
         log.info("webhook_checkout_activated event_id={} stripe_sub_id={} stripe_customer_id={}",
                 event.getId(), stripeSubId, stripeCustomerId);
+    }
+
+    private void handleInvoicePaymentSucceeded(Event event) {
+        Optional<StripeObject> objectOpt = event.getDataObjectDeserializer().getObject();
+        if (objectOpt.isEmpty()) {
+            log.warn("webhook_deserialization_failed event_id={} type={}", event.getId(), event.getType());
+            return;
+        }
+        if (!(objectOpt.get() instanceof Invoice invoice)) {
+            log.warn("webhook_unexpected_type event_id={} expected=Invoice", event.getId());
+            return;
+        }
+
+        Parent parent = invoice.getParent();
+        if (parent == null || parent.getSubscriptionDetails() == null) {
+            log.debug("webhook_invoice_no_subscription event_id={} — not a subscription invoice", event.getId());
+            return;
+        }
+        String stripeSubId = parent.getSubscriptionDetails().getSubscription();
+        subscriptionRepository.findByStripeSubscriptionId(stripeSubId)
+                .ifPresentOrElse(
+                        sub -> {
+                            sub.setStatus(SubscriptionStatus.ACTIVE);
+                            if (invoice.getPeriodStart() != null) {
+                                sub.setCurrentPeriodStart(Instant.ofEpochSecond(invoice.getPeriodStart()));
+                            }
+                            if (invoice.getPeriodEnd() != null) {
+                                sub.setCurrentPeriodEnd(Instant.ofEpochSecond(invoice.getPeriodEnd()));
+                            }
+                            sub.setUpdatedAt(Instant.now());
+                            subscriptionRepository.save(sub);
+                            log.info("webhook_invoice_payment_succeeded stripe_sub_id={}", stripeSubId);
+                        },
+                        () -> log.debug("webhook_subscription_not_found stripe_sub_id={}", stripeSubId)
+                );
+    }
+
+    private void handleInvoicePaymentFailed(Event event) {
+        Optional<StripeObject> objectOpt = event.getDataObjectDeserializer().getObject();
+        if (objectOpt.isEmpty()) {
+            log.warn("webhook_deserialization_failed event_id={} type={}", event.getId(), event.getType());
+            return;
+        }
+        if (!(objectOpt.get() instanceof Invoice invoice)) {
+            log.warn("webhook_unexpected_type event_id={} expected=Invoice", event.getId());
+            return;
+        }
+
+        Parent parent = invoice.getParent();
+        if (parent == null || parent.getSubscriptionDetails() == null) {
+            log.debug("webhook_invoice_no_subscription event_id={} — not a subscription invoice", event.getId());
+            return;
+        }
+        String stripeSubId = parent.getSubscriptionDetails().getSubscription();
+        subscriptionRepository.findByStripeSubscriptionId(stripeSubId)
+                .ifPresentOrElse(
+                        sub -> {
+                            sub.setStatus(SubscriptionStatus.PAST_DUE);
+                            sub.setUpdatedAt(Instant.now());
+                            subscriptionRepository.save(sub);
+                            log.info("webhook_invoice_payment_failed stripe_sub_id={}", stripeSubId);
+
+                            subscriptionRepository.findOwnerEmailByBusinessId(sub.getBusinessId())
+                                    .ifPresentOrElse(
+                                            ownerEmail -> asyncEmailSender.sendPaymentFailedAsync(ownerEmail),
+                                            () -> log.warn("webhook_owner_email_not_found business_id={}", sub.getBusinessId())
+                                    );
+                        },
+                        () -> log.debug("webhook_subscription_not_found stripe_sub_id={}", stripeSubId)
+                );
     }
 
     private void handleSubscriptionEvent(Event event) {

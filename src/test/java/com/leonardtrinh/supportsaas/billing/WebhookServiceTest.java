@@ -1,7 +1,9 @@
 package com.leonardtrinh.supportsaas.billing;
 
+import com.leonardtrinh.supportsaas.email.AsyncEmailSender;
 import com.stripe.model.Event;
 import com.stripe.model.EventDataObjectDeserializer;
+import com.stripe.model.Invoice;
 import com.stripe.model.Price;
 import com.stripe.model.SubscriptionItem;
 import com.stripe.model.SubscriptionItemCollection;
@@ -43,6 +45,9 @@ class WebhookServiceTest {
     private SubscriptionService subscriptionService;
 
     @Mock
+    private AsyncEmailSender asyncEmailSender;
+
+    @Mock
     private PlanRepository planRepository;
 
     @Mock
@@ -56,6 +61,7 @@ class WebhookServiceTest {
                 processedWebhookEventRepository,
                 subscriptionRepository,
                 subscriptionService,
+                asyncEmailSender,
                 planRepository,
                 stripeService);
     }
@@ -162,6 +168,57 @@ class WebhookServiceTest {
     }
 
     // -----------------------------------------------------------------------
+    // invoice.payment_succeeded
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("handle — invoice.payment_succeeded sets status ACTIVE and updates period dates")
+    void handle_invoicePaymentSucceeded_setsActiveAndUpdatesPeriod() {
+        String stripeSubId = "sub_pay_ok";
+        long periodStart = 1_700_000_000L;
+        long periodEnd = 1_702_592_000L;
+        Event event = mockInvoiceEventWithPeriod("evt_010", "invoice.payment_succeeded", stripeSubId, periodStart, periodEnd);
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_010")).thenReturn(false);
+
+        Subscription sub = new Subscription();
+        sub.setStatus(SubscriptionStatus.PAST_DUE);
+        when(subscriptionRepository.findByStripeSubscriptionId(stripeSubId)).thenReturn(Optional.of(sub));
+
+        webhookService.handle(event);
+
+        verify(subscriptionRepository).save(argThat(s ->
+                s.getStatus() == SubscriptionStatus.ACTIVE
+                && s.getCurrentPeriodStart() != null
+                && s.getCurrentPeriodEnd() != null
+                && s.getUpdatedAt() != null));
+        verify(asyncEmailSender, never()).sendPaymentFailedAsync(any());
+    }
+
+    @Test
+    @DisplayName("handle — invoice.payment_succeeded: subscription not found is silently ignored")
+    void handle_invoicePaymentSucceeded_noLocalMatch_noSave() {
+        String stripeSubId = "sub_unknown_pay";
+        Event event = mockInvoiceEvent("evt_011", "invoice.payment_succeeded", stripeSubId);
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_011")).thenReturn(false);
+        when(subscriptionRepository.findByStripeSubscriptionId(stripeSubId)).thenReturn(Optional.empty());
+
+        webhookService.handle(event);
+
+        verify(subscriptionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("handle — invoice.payment_succeeded: deserialization failure does not throw")
+    void handle_invoicePaymentSucceeded_deserializationFails_noException() {
+        Event event = mockEventWithEmptyDeserializer("evt_012", "invoice.payment_succeeded");
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_012")).thenReturn(false);
+
+        webhookService.handle(event);
+
+        verify(subscriptionRepository, never()).save(any());
+    }
+
+    // -----------------------------------------------------------------------
     // customer.subscription.deleted — downgrade to Free
     // -----------------------------------------------------------------------
 
@@ -169,8 +226,8 @@ class WebhookServiceTest {
     @DisplayName("handle — subscription.deleted downgrades to Free plan with status ACTIVE")
     void handle_subscriptionDeleted_downgradesToFreePlan() {
         String stripeSubId = "sub_deleted_001";
-        Event event = mockSubscriptionEvent("evt_010", "customer.subscription.deleted", stripeSubId);
-        when(processedWebhookEventRepository.existsByStripeEventId("evt_010")).thenReturn(false);
+        Event event = mockSubscriptionEvent("evt_013", "customer.subscription.deleted", stripeSubId);
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_013")).thenReturn(false);
 
         Subscription localSub = new Subscription();
         localSub.setStatus(SubscriptionStatus.PAST_DUE);
@@ -200,8 +257,8 @@ class WebhookServiceTest {
     @DisplayName("handle — subscription.deleted skips downgrade when local subscription not found")
     void handle_subscriptionDeleted_noLocalMatch_noSave() {
         String stripeSubId = "sub_deleted_unknown";
-        Event event = mockSubscriptionEvent("evt_011", "customer.subscription.deleted", stripeSubId);
-        when(processedWebhookEventRepository.existsByStripeEventId("evt_011")).thenReturn(false);
+        Event event = mockSubscriptionEvent("evt_014", "customer.subscription.deleted", stripeSubId);
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_014")).thenReturn(false);
 
         when(subscriptionRepository.findByStripeSubscriptionId(stripeSubId))
                 .thenReturn(Optional.empty());
@@ -216,8 +273,8 @@ class WebhookServiceTest {
     @DisplayName("handle — subscription.deleted throws when Free plan missing from database")
     void handle_subscriptionDeleted_freePlanMissing_throwsIllegalState() {
         String stripeSubId = "sub_deleted_002";
-        Event event = mockSubscriptionEvent("evt_012", "customer.subscription.deleted", stripeSubId);
-        when(processedWebhookEventRepository.existsByStripeEventId("evt_012")).thenReturn(false);
+        Event event = mockSubscriptionEvent("evt_015", "customer.subscription.deleted", stripeSubId);
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_015")).thenReturn(false);
 
         Subscription localSub = new Subscription();
         localSub.setStatus(SubscriptionStatus.ACTIVE);
@@ -235,9 +292,9 @@ class WebhookServiceTest {
     @DisplayName("handle — subscription.deleted with deserialization failure logs warning without crash")
     void handle_subscriptionDeleted_deserializationFails_noException() {
         Event event = mock(Event.class);
-        when(event.getId()).thenReturn("evt_013");
+        when(event.getId()).thenReturn("evt_016");
         when(event.getType()).thenReturn("customer.subscription.deleted");
-        when(processedWebhookEventRepository.existsByStripeEventId("evt_013")).thenReturn(false);
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_016")).thenReturn(false);
 
         EventDataObjectDeserializer deserializer = mock(EventDataObjectDeserializer.class);
         when(deserializer.getObject()).thenReturn(Optional.empty());
@@ -360,7 +417,6 @@ class WebhookServiceTest {
     @Test
     @DisplayName("handle — checkout.session.completed skips when stripeSubId is null")
     void handle_checkoutCompleted_nullStripeSubId_skips() {
-        // Session with null subscription ID (e.g. setup mode, no subscription created)
         Event event = mockCheckoutSessionEvent("evt_checkout_005", null, "cus_checkout_005");
         when(processedWebhookEventRepository.existsByStripeEventId("evt_checkout_005")).thenReturn(false);
 
@@ -368,6 +424,79 @@ class WebhookServiceTest {
 
         verify(subscriptionRepository, never()).save(any());
         verify(subscriptionRepository, never()).findByStripeCustomerId(any());
+    }
+
+    // -----------------------------------------------------------------------
+    // invoice.payment_failed
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("handle — invoice.payment_failed sets status PAST_DUE and sends email to owner")
+    void handle_invoicePaymentFailed_setsPastDueAndSendsEmail() {
+        String stripeSubId = "sub_pay_fail";
+        UUID businessId = UUID.randomUUID();
+        String ownerEmail = "owner@example.com";
+        Event event = mockInvoiceEvent("evt_020", "invoice.payment_failed", stripeSubId);
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_020")).thenReturn(false);
+
+        Subscription sub = new Subscription();
+        sub.setStatus(SubscriptionStatus.ACTIVE);
+        sub.setBusinessId(businessId);
+        when(subscriptionRepository.findByStripeSubscriptionId(stripeSubId)).thenReturn(Optional.of(sub));
+        when(subscriptionRepository.findOwnerEmailByBusinessId(businessId)).thenReturn(Optional.of(ownerEmail));
+
+        webhookService.handle(event);
+
+        verify(subscriptionRepository).save(argThat(s ->
+                s.getStatus() == SubscriptionStatus.PAST_DUE
+                && s.getUpdatedAt() != null));
+        verify(asyncEmailSender).sendPaymentFailedAsync(ownerEmail);
+    }
+
+    @Test
+    @DisplayName("handle — invoice.payment_failed: owner email not found still saves PAST_DUE")
+    void handle_invoicePaymentFailed_ownerEmailMissing_stillSavesPastDue() {
+        String stripeSubId = "sub_pay_fail_no_email";
+        UUID businessId = UUID.randomUUID();
+        Event event = mockInvoiceEvent("evt_021", "invoice.payment_failed", stripeSubId);
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_021")).thenReturn(false);
+
+        Subscription sub = new Subscription();
+        sub.setStatus(SubscriptionStatus.ACTIVE);
+        sub.setBusinessId(businessId);
+        when(subscriptionRepository.findByStripeSubscriptionId(stripeSubId)).thenReturn(Optional.of(sub));
+        when(subscriptionRepository.findOwnerEmailByBusinessId(businessId)).thenReturn(Optional.empty());
+
+        webhookService.handle(event);
+
+        verify(subscriptionRepository).save(argThat(s -> s.getStatus() == SubscriptionStatus.PAST_DUE));
+        verify(asyncEmailSender, never()).sendPaymentFailedAsync(any());
+    }
+
+    @Test
+    @DisplayName("handle — invoice.payment_failed: subscription not found is silently ignored")
+    void handle_invoicePaymentFailed_noLocalMatch_noSave() {
+        String stripeSubId = "sub_unknown_fail";
+        Event event = mockInvoiceEvent("evt_022", "invoice.payment_failed", stripeSubId);
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_022")).thenReturn(false);
+        when(subscriptionRepository.findByStripeSubscriptionId(stripeSubId)).thenReturn(Optional.empty());
+
+        webhookService.handle(event);
+
+        verify(subscriptionRepository, never()).save(any());
+        verify(asyncEmailSender, never()).sendPaymentFailedAsync(any());
+    }
+
+    @Test
+    @DisplayName("handle — invoice.payment_failed: deserialization failure does not throw")
+    void handle_invoicePaymentFailed_deserializationFails_noException() {
+        Event event = mockEventWithEmptyDeserializer("evt_023", "invoice.payment_failed");
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_023")).thenReturn(false);
+
+        webhookService.handle(event);
+
+        verify(subscriptionRepository, never()).save(any());
+        verify(asyncEmailSender, never()).sendPaymentFailedAsync(any());
     }
 
     // -----------------------------------------------------------------------
@@ -529,6 +658,60 @@ class WebhookServiceTest {
         Event event = mock(Event.class);
         when(event.getId()).thenReturn(id);
         when(event.getType()).thenReturn(type);
+        return event;
+    }
+
+    private Event mockInvoiceEvent(String id, String type, String stripeSubId) {
+        Invoice.Parent.SubscriptionDetails subDetails = mock(Invoice.Parent.SubscriptionDetails.class);
+        when(subDetails.getSubscription()).thenReturn(stripeSubId);
+
+        Invoice.Parent parent = mock(Invoice.Parent.class);
+        when(parent.getSubscriptionDetails()).thenReturn(subDetails);
+
+        Invoice invoice = mock(Invoice.class);
+        when(invoice.getParent()).thenReturn(parent);
+
+        EventDataObjectDeserializer deserializer = mock(EventDataObjectDeserializer.class);
+        when(deserializer.getObject()).thenReturn(Optional.of(invoice));
+
+        Event event = mock(Event.class);
+        when(event.getId()).thenReturn(id);
+        when(event.getType()).thenReturn(type);
+        when(event.getDataObjectDeserializer()).thenReturn(deserializer);
+        return event;
+    }
+
+    private Event mockInvoiceEventWithPeriod(
+            String id, String type, String stripeSubId, long periodStart, long periodEnd) {
+        Invoice.Parent.SubscriptionDetails subDetails = mock(Invoice.Parent.SubscriptionDetails.class);
+        when(subDetails.getSubscription()).thenReturn(stripeSubId);
+
+        Invoice.Parent parent = mock(Invoice.Parent.class);
+        when(parent.getSubscriptionDetails()).thenReturn(subDetails);
+
+        Invoice invoice = mock(Invoice.class);
+        when(invoice.getParent()).thenReturn(parent);
+        when(invoice.getPeriodStart()).thenReturn(periodStart);
+        when(invoice.getPeriodEnd()).thenReturn(periodEnd);
+
+        EventDataObjectDeserializer deserializer = mock(EventDataObjectDeserializer.class);
+        when(deserializer.getObject()).thenReturn(Optional.of(invoice));
+
+        Event event = mock(Event.class);
+        when(event.getId()).thenReturn(id);
+        when(event.getType()).thenReturn(type);
+        when(event.getDataObjectDeserializer()).thenReturn(deserializer);
+        return event;
+    }
+
+    private Event mockEventWithEmptyDeserializer(String id, String type) {
+        EventDataObjectDeserializer deserializer = mock(EventDataObjectDeserializer.class);
+        when(deserializer.getObject()).thenReturn(Optional.empty());
+
+        Event event = mock(Event.class);
+        when(event.getId()).thenReturn(id);
+        when(event.getType()).thenReturn(type);
+        when(event.getDataObjectDeserializer()).thenReturn(deserializer);
         return event;
     }
 

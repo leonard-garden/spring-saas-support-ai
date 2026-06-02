@@ -5,4 +5,6 @@ public interface EmailService {
     void sendEmailVerificationEmail(String toEmail, String verificationToken);
     void sendInvitationEmail(String toEmail, String rawToken);
     void sendTrialExpiredEmail(String toEmail);
+
+    void sendPaymentFailedEmail(String toEmail);
 }
