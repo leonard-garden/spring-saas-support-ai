@@ -18,4 +18,12 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
     List<Subscription> findAllByStatusAndTrialEndsAtBefore(SubscriptionStatus status, Instant threshold);
 
     List<Subscription> findAllByStatusIn(List<SubscriptionStatus> statuses);
+
+    // Native query — bypasses tenant filter; returns the owner email for a given tenant's subscription
+    @Query(value = """
+            SELECT m.email FROM members m
+            WHERE m.business_id = :businessId AND m.role = 'OWNER'
+            LIMIT 1
+            """, nativeQuery = true)
+    Optional<String> findOwnerEmailByBusinessId(@Param("businessId") UUID businessId);
 }
