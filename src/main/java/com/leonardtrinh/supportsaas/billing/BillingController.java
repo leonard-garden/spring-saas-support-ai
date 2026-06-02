@@ -74,6 +74,20 @@ public class BillingController {
         return ApiResponse.ok(response);
     }
 
+    @PostMapping("/upgrade")
+    @Operation(summary = "Immediately upgrade to a higher-priced plan with proration")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Upgrade initiated; subscription record updated via webhook"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "No Stripe subscription, or target plan price not higher than current"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Admin role required")
+    })
+    public ApiResponse<UpgradeResponse> upgradeSubscription(
+            @AuthenticationPrincipal JwtClaims claims,
+            @Valid @RequestBody UpgradeDowngradeRequest request) {
+        UpgradeResponse response = subscriptionService.upgradeSubscription(claims.tenantId(), request.planSlug());
+        return ApiResponse.ok(response);
+    }
+
     @PostMapping("/cancel")
     @Operation(summary = "Cancel subscription at period end")
     @ApiResponses({

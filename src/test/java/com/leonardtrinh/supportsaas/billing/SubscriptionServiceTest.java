@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -378,6 +379,120 @@ class SubscriptionServiceTest {
         assertThat(result.getCurrentPeriodEnd()).isNotNull();
     }
 
+    // --- upgrade tests ---
+
+    @Test
+    @DisplayName("upgradeSubscription throws CannotUpgradeException when no active subscription")
+    void upgradeSubscription_noActiveSubscription_throwsCannotUpgrade() {
+        UUID businessId = UUID.randomUUID();
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.upgradeSubscription(businessId, "pro"))
+                .isInstanceOf(CannotUpgradeException.class)
+                .hasMessageContaining("No active subscription");
+    }
+
+    @Test
+    @DisplayName("upgradeSubscription throws CannotUpgradeException when stripeSubscriptionId is null (unpaid trial)")
+    void upgradeSubscription_noStripeSubId_throwsCannotUpgrade() {
+        UUID businessId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+
+        Subscription sub = subscriptionWith(planId);
+        // stripeSubscriptionId is null by default
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.of(sub));
+
+        assertThatThrownBy(() -> service.upgradeSubscription(businessId, "pro"))
+                .isInstanceOf(CannotUpgradeException.class)
+                .hasMessageContaining("unpaid trial");
+    }
+
+    @Test
+    @DisplayName("upgradeSubscription throws ResourceNotFoundException when target plan slug does not exist")
+    void upgradeSubscription_unknownPlanSlug_throwsResourceNotFound() {
+        UUID businessId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+
+        Subscription sub = subscriptionWith(planId);
+        sub.setStripeSubscriptionId("sub_123");
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.of(sub));
+        when(planRepository.findBySlug("unknown")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.upgradeSubscription(businessId, "unknown"))
+                .isInstanceOf(com.leonardtrinh.supportsaas.common.ResourceNotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("upgradeSubscription throws CannotUpgradeException when target plan price equals current plan price")
+    void upgradeSubscription_samePricePlan_throwsCannotUpgrade() {
+        UUID businessId = UUID.randomUUID();
+        UUID currentPlanId = UUID.randomUUID();
+        UUID targetPlanId = UUID.randomUUID();
+
+        Subscription sub = subscriptionWith(currentPlanId);
+        sub.setStripeSubscriptionId("sub_123");
+
+        Plan currentPlan = planWithPrice(currentPlanId, "starter", "price_starter", new java.math.BigDecimal("29.00"));
+        Plan targetPlan = planWithPrice(targetPlanId, "starter2", "price_starter2", new java.math.BigDecimal("29.00"));
+
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.of(sub));
+        when(planRepository.findBySlug("starter2")).thenReturn(Optional.of(targetPlan));
+        when(planRepository.findById(currentPlanId)).thenReturn(Optional.of(currentPlan));
+
+        assertThatThrownBy(() -> service.upgradeSubscription(businessId, "starter2"))
+                .isInstanceOf(CannotUpgradeException.class)
+                .hasMessageContaining("higher than current plan price");
+    }
+
+    @Test
+    @DisplayName("upgradeSubscription throws CannotUpgradeException when target plan price is lower than current plan price")
+    void upgradeSubscription_lowerPricePlan_throwsCannotUpgrade() {
+        UUID businessId = UUID.randomUUID();
+        UUID currentPlanId = UUID.randomUUID();
+        UUID targetPlanId = UUID.randomUUID();
+
+        Subscription sub = subscriptionWith(currentPlanId);
+        sub.setStripeSubscriptionId("sub_abc");
+
+        Plan currentPlan = planWithPrice(currentPlanId, "pro", "price_pro", new java.math.BigDecimal("99.00"));
+        Plan targetPlan = planWithPrice(targetPlanId, "starter", "price_starter", new java.math.BigDecimal("29.00"));
+
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.of(sub));
+        when(planRepository.findBySlug("starter")).thenReturn(Optional.of(targetPlan));
+        when(planRepository.findById(currentPlanId)).thenReturn(Optional.of(currentPlan));
+
+        assertThatThrownBy(() -> service.upgradeSubscription(businessId, "starter"))
+                .isInstanceOf(CannotUpgradeException.class)
+                .hasMessageContaining("higher than current plan price");
+    }
+
+    @Test
+    @DisplayName("upgradeSubscription calls StripeService.updateSubscription and returns UpgradeResponse on happy path")
+    void upgradeSubscription_happyPath_callsStripeAndReturnsResponse() {
+        UUID businessId = UUID.randomUUID();
+        UUID currentPlanId = UUID.randomUUID();
+        UUID targetPlanId = UUID.randomUUID();
+
+        Subscription sub = subscriptionWith(currentPlanId);
+        sub.setStripeSubscriptionId("sub_upgrade_me");
+
+        Plan currentPlan = planWithPrice(currentPlanId, "starter", "price_starter", new java.math.BigDecimal("29.00"));
+        Plan targetPlan = planWithPrice(targetPlanId, "pro", "price_pro", new java.math.BigDecimal("99.00"));
+        ReflectionTestUtils.setField(targetPlan, "name", "Pro");
+
+        com.stripe.model.Subscription stripeSubscription = new com.stripe.model.Subscription();
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.of(sub));
+        when(planRepository.findBySlug("pro")).thenReturn(Optional.of(targetPlan));
+        when(planRepository.findById(currentPlanId)).thenReturn(Optional.of(currentPlan));
+        when(stripeService.updateSubscription(anyString(), anyString(), anyString())).thenReturn(stripeSubscription);
+
+        UpgradeResponse response = service.upgradeSubscription(businessId, "pro");
+
+        assertThat(response.targetPlan()).isEqualTo("Pro");
+        assertThat(response.message()).isNotBlank();
+        verify(stripeService).updateSubscription(eq("sub_upgrade_me"), eq("price_pro"), anyString());
+    }
+
     // --- helpers ---
 
     private Subscription subscriptionWith(UUID planId) {
@@ -398,6 +513,15 @@ class SubscriptionServiceTest {
         ReflectionTestUtils.setField(plan, "id", id);
         ReflectionTestUtils.setField(plan, "slug", slug);
         ReflectionTestUtils.setField(plan, "stripePriceId", stripePriceId);
+        return plan;
+    }
+
+    private Plan planWithPrice(UUID id, String slug, String stripePriceId, java.math.BigDecimal price) {
+        Plan plan = new Plan();
+        ReflectionTestUtils.setField(plan, "id", id);
+        ReflectionTestUtils.setField(plan, "slug", slug);
+        ReflectionTestUtils.setField(plan, "stripePriceId", stripePriceId);
+        ReflectionTestUtils.setField(plan, "priceUsdMonthly", price);
         return plan;
     }
 }

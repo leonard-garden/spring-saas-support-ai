@@ -149,6 +149,39 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public UpgradeResponse upgradeSubscription(UUID businessId, String planSlug) {
+        Subscription sub = subscriptionRepository.findActiveByBusinessId(businessId)
+                .orElseThrow(() -> new CannotUpgradeException("No active subscription found."));
+
+        String stripeSubId = sub.getStripeSubscriptionId();
+        if (stripeSubId == null) {
+            throw new CannotUpgradeException(
+                    "Subscription has no Stripe ID — tenant is still on an unpaid trial.");
+        }
+
+        Plan targetPlan = planRepository.findBySlug(planSlug)
+                .orElseThrow(() -> new com.leonardtrinh.supportsaas.common.ResourceNotFoundException("Plan", planSlug));
+
+        if (targetPlan.getStripePriceId() == null) {
+            throw new CannotUpgradeException("Target plan has no Stripe price configured.");
+        }
+
+        Plan currentPlan = planRepository.findById(sub.getPlanId())
+                .orElseThrow(() -> new com.leonardtrinh.supportsaas.auth.PlanMisconfiguredException("unknown"));
+
+        if (targetPlan.getPriceUsdMonthly().compareTo(currentPlan.getPriceUsdMonthly()) <= 0) {
+            throw new CannotUpgradeException(
+                    "Target plan price must be higher than current plan price to upgrade.");
+        }
+
+        String idempotencyKey = businessId + ":upgrade:" + planSlug + ":" + LocalDate.now(ZoneOffset.UTC);
+        stripeService.updateSubscription(stripeSubId, targetPlan.getStripePriceId(), idempotencyKey);
+
+        return UpgradeResponse.of(targetPlan.getName());
+    }
+
+    @Override
     @Transactional
     public void syncFromStripe(Subscription subscription) {
         com.stripe.model.Subscription stripeSubscription =

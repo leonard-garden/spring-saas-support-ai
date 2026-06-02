@@ -14,6 +14,16 @@ public interface SubscriptionService {
     CancelSubscriptionResponse cancelSubscription(UUID businessId);
 
     /**
+     * Immediately upgrade the tenant's subscription to a higher-priced plan with proration.
+     * Calls Stripe to update the subscription in real time; the DB record is updated
+     * asynchronously via the {@code customer.subscription.updated} webhook.
+     *
+     * @throws CannotUpgradeException if the tenant has no Stripe subscription (unpaid trial),
+     *                                 or if the target plan price is not higher than the current plan.
+     */
+    UpgradeResponse upgradeSubscription(UUID businessId, String planSlug);
+
+    /**
      * Reconcile a single subscription's status against Stripe.
      * Called by StripeReconciliationScheduler when a status mismatch is detected.
      */
