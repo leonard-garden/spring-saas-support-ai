@@ -30,14 +30,17 @@ public class SecurityConfig {
 
     private final JwtService jwtService;
     private final RateLimitFilter rateLimitFilter;
+    private final TenantRateLimitFilter tenantRateLimitFilter;
     private final List<String> allowedOrigins;
 
     public SecurityConfig(
             JwtService jwtService,
             RateLimitFilter rateLimitFilter,
+            TenantRateLimitFilter tenantRateLimitFilter,
             @Value("${app.cors.allowed-origins}") String allowedOriginsRaw) {
         this.jwtService = jwtService;
         this.rateLimitFilter = rateLimitFilter;
+        this.tenantRateLimitFilter = tenantRateLimitFilter;
         this.allowedOrigins = Arrays.asList(allowedOriginsRaw.split(","));
     }
 
@@ -96,7 +99,8 @@ public class SecurityConfig {
             )
             .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint()))
             .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterAfter(jwtAuthFilter(), RateLimitFilter.class);
+            .addFilterAfter(jwtAuthFilter(), RateLimitFilter.class)
+            .addFilterAfter(tenantRateLimitFilter, JwtAuthFilter.class);
 
         return http.build();
     }
