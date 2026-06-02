@@ -87,14 +87,108 @@ Frontend                 Backend                      Stripe
 | GET | `/api/v1/billing/subscription` | Bearer | Current tenant subscription |
 | POST | `/api/v1/billing/checkout` | Bearer | Create Stripe Checkout session |
 | GET | `/api/v1/billing/success` | Bearer | Post-checkout success handler |
-| POST | `/api/v1/billing/cancel` | Bearer | Cancel subscription |
+| POST | `/api/v1/billing/cancel` | Bearer | Cancel subscription (at period end) |
+| POST | `/api/v1/billing/upgrade` | Bearer | Upgrade to higher plan (immediate + proration) |
+| POST | `/api/v1/billing/downgrade` | Bearer | Downgrade to lower plan (at period end) |
 | POST | `/api/v1/billing/webhook` | Stripe-sig | Stripe webhook receiver |
 
-### 3.2 Webhook Events
+### 3.2 Upgrade / Downgrade Flow
+
+**Upgrade (e.g. Starter → Pro) — immediate with proration:**
+```
+POST /api/v1/billing/upgrade {planSlug: "pro"}
+  └─► StripeService.updateSubscription(stripeSubId, newPriceId, prorate=true)
+        Stripe charges prorated diff immediately
+        └─► webhook: customer.subscription.updated
+              BillingService.handleSubscriptionUpdated()
+                update subscription.planId + current_period_end in DB
+```
+
+**Downgrade (e.g. Pro → Starter) — deferred to period end:**
+```
+POST /api/v1/billing/downgrade {planSlug: "starter"}
+  └─► StripeService.scheduleSubscriptionUpdate(stripeSubId, newPriceId)
+        Stripe sets pending change for next renewal, no immediate charge
+        └─► BillingService.setPendingDowngrade(tenantId, targetPlanSlug)
+              DB: subscription.pending_plan_id = starter_plan_id
+              ─► webhook: customer.subscription.updated (at period end)
+                    apply downgrade: update planId, clear pending_plan_id
+```
+
+**Cancel — deferred to period end:**
+```
+POST /api/v1/billing/cancel
+  └─► StripeService.cancelAtPeriodEnd(stripeSubId)
+        └─► webhook: customer.subscription.deleted (at period end)
+              downgrade to Free
+```
+
+New DB column needed: `subscriptions.pending_plan_id UUID` (nullable).
+New migration: `V22__add_pending_plan_to_subscriptions.sql`
+
+Add webhook event to handle:
+
+| Event | Action |
+|-------|--------|
+| `customer.subscription.updated` | Apply upgrade/downgrade, update planId + period dates |
+
+---
+
+### 3.3 Idempotency (Full Coverage)
+
+Three layers:
+
+**Layer 1 — Webhook idempotency** (already in spec):
+Store `stripe_event_id` in `processed_webhook_events`. Duplicate webhook → skip.
+
+**Layer 2 — Checkout session idempotency** (double-click / browser back):
+Before creating a new Checkout session, check if tenant already has an `INCOMPLETE` Stripe subscription or an open session:
+```java
+// BillingServiceImpl.createCheckoutSession()
+Optional<Subscription> existing = subscriptionRepo.findActiveOrTrialByBusinessId(tenantId);
+if (existing.isPresent() && existing.get().getStatus() == ACTIVE) {
+    throw new AlreadySubscribedException("Already on plan: " + existing.get().getPlanId());
+}
+```
+Stripe also rejects duplicate Checkout sessions for the same customer + price — rely on both.
+
+**Layer 3 — Stripe API call idempotency**:
+Pass `IdempotencyKey` header on all mutating Stripe calls:
+```java
+// deterministic key = tenantId + operation + date (safe to retry within 24h)
+String idempotencyKey = tenantId + ":checkout:" + LocalDate.now();
+RequestOptions opts = RequestOptions.builder().setIdempotencyKey(idempotencyKey).build();
+Session.create(params, opts);
+```
+
+---
+
+### 3.4 Reconciliation
+
+Webhooks can be missed (network errors, Stripe retries for 3 days but not guaranteed).
+A daily reconciliation job syncs DB subscription state against Stripe.
+
+```
+@Scheduled(cron = "0 30 3 * * *")   ← 3:30am daily (after trial expiry at 2am)
+StripeReconciliationScheduler.run()
+  └─► for each subscription WHERE status IN (ACTIVE, PAST_DUE, TRIAL):
+        ├─ stripeService.retrieveSubscription(stripeSubscriptionId)
+        │   (skip if stripeSubscriptionId is null — trial not yet converted)
+        ├─ compare Stripe status vs DB status
+        └─ if mismatch:
+             log.warn("Reconciliation mismatch tenantId={} dbStatus={} stripeStatus={}")
+             billingService.syncFromStripe(stripeSubscription)
+             metrics.increment("stripe.reconciliation.mismatch")
+```
+
+**Reconciliation does NOT replace webhooks** — it is a safety net only. Log every mismatch as a warning so ops can investigate webhook delivery issues.
+
+---
 
 | Event | Action |
 |-------|--------|
 | `checkout.session.completed` | Activate subscription, set period dates |
+| `customer.subscription.updated` | Apply upgrade/downgrade, sync planId + period dates |
 | `invoice.payment_succeeded` | Renew subscription, update `current_period_end` |
 | `invoice.payment_failed` | Set status `PAST_DUE`, send email warning |
 | `customer.subscription.deleted` | Cancel → downgrade to Free |
@@ -294,7 +388,8 @@ Log output format (JSON via logback):
 | `billing/SubscriptionService.java` | Interface |
 | `billing/SubscriptionServiceImpl.java` | Trial creation, status transitions |
 | `billing/TrialExpiryScheduler.java` | Daily cron, downgrade expired trials |
-| `billing/ProcessedWebhookEvent.java` | Entity for idempotency |
+| `billing/StripeReconciliationScheduler.java` | Daily cron, sync DB ↔ Stripe state |
+| `billing/ProcessedWebhookEvent.java` | Entity for webhook idempotency |
 | `billing/ProcessedWebhookEventRepository.java` | JPA repo |
 | `config/RateLimitFilter.java` | Two-tier Bucket4j filter |
 | `config/SecurityHeadersFilter.java` | HTTP security headers |
@@ -309,6 +404,7 @@ Log output format (JSON via logback):
 | File | Purpose |
 |------|---------|
 | `V21__create_processed_webhook_events.sql` | Webhook idempotency table |
+| `V22__add_pending_plan_to_subscriptions.sql` | Deferred downgrade support |
 
 ### Dependencies to add (pom.xml)
 
@@ -357,3 +453,7 @@ Log output format (JSON via logback):
 | `RateLimitFilterTest` | Unit | Bucket refill, 429 response |
 | `BillingIT` | Integration (Testcontainers) | Full checkout → webhook → quota flow |
 | `TrialExpiryIT` | Integration | Trial creation → expiry → downgrade |
+| `UpgradeDowngradeTest` | Unit | Proration on upgrade, deferred downgrade scheduling |
+| `WebhookIdempotencyTest` | Unit | Duplicate event → skip, no double-apply |
+| `ReconciliationSchedulerTest` | Unit | Mismatch detected → syncFromStripe called, metric incremented |
+| `CheckoutIdempotencyTest` | Unit | Already-active tenant → AlreadySubscribedException |
