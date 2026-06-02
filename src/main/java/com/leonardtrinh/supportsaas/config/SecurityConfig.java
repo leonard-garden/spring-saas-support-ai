@@ -83,6 +83,8 @@ public class SecurityConfig {
                     "/v3/api-docs/**"
                 ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/billing/plans").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/billing/success").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/v1/billing/checkout").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/kb/documents").hasAnyRole("ADMIN", "OWNER")
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/kb/documents/**").hasAnyRole("ADMIN", "OWNER")
                 .requestMatchers(HttpMethod.GET, "/api/v1/kb/**").authenticated()
