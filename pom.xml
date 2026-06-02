@@ -223,6 +223,12 @@
             <version>29.2.0</version>
         </dependency>
 
+        <!-- Micrometer Prometheus registry -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
         <!-- Bucket4j — in-memory IP rate limiting -->
         <dependency>
             <groupId>com.bucket4j</groupId>
