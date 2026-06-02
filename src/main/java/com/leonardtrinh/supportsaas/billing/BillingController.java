@@ -88,6 +88,20 @@ public class BillingController {
         return ApiResponse.ok(response);
     }
 
+    @PostMapping("/downgrade")
+    @Operation(summary = "Schedule a deferred downgrade to a lower-priced plan at period end")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Downgrade scheduled; plan changes at end of current billing period"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "No Stripe subscription, target plan price not lower, or downgrade already pending"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Admin role required")
+    })
+    public ApiResponse<DowngradeResponse> downgradeSubscription(
+            @AuthenticationPrincipal JwtClaims claims,
+            @Valid @RequestBody UpgradeDowngradeRequest request) {
+        DowngradeResponse response = subscriptionService.downgradeSubscription(claims.tenantId(), request.planSlug());
+        return ApiResponse.ok(response);
+    }
+
     @PostMapping("/cancel")
     @Operation(summary = "Cancel subscription at period end")
     @ApiResponses({
