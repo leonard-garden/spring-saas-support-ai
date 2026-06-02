@@ -120,6 +120,34 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         return new CheckoutResponse(session.getUrl());
     }
 
+    @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public CancelSubscriptionResponse cancelSubscription(UUID businessId) {
+        Subscription sub = subscriptionRepository.findActiveByBusinessId(businessId)
+                .orElseThrow(SubscriptionNotCancellableException::new);
+
+        Plan plan = planRepository.findById(sub.getPlanId())
+                .orElseThrow(() -> new PlanMisconfiguredException("unknown"));
+
+        if (PLAN_FREE.equals(plan.getSlug())) {
+            throw new SubscriptionNotCancellableException();
+        }
+
+        if (sub.isCancelAtPeriodEnd()) {
+            throw new AlreadyCancelledAtPeriodEndException();
+        }
+
+        String stripeSubId = sub.getStripeSubscriptionId();
+        if (stripeSubId == null) {
+            throw new SubscriptionNotCancellableException();
+        }
+
+        String idempotencyKey = businessId + ":cancel:" + LocalDate.now(ZoneOffset.UTC);
+        stripeService.cancelAtPeriodEnd(stripeSubId, idempotencyKey);
+
+        return new CancelSubscriptionResponse(true, sub.getCurrentPeriodEnd());
+    }
+
     @Transactional
     void saveStripeCustomerId(UUID businessId, String customerId) {
         Business business = businessRepository.findById(businessId)

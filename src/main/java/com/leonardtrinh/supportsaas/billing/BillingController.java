@@ -74,6 +74,19 @@ public class BillingController {
         return ApiResponse.ok(response);
     }
 
+    @PostMapping("/cancel")
+    @Operation(summary = "Cancel subscription at period end")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cancellation scheduled"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Free plan or already cancelled"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Admin role required")
+    })
+    public ApiResponse<CancelSubscriptionResponse> cancelSubscription() {
+        UUID tenantId = TenantContext.getTenantId();
+        CancelSubscriptionResponse response = subscriptionService.cancelSubscription(tenantId);
+        return ApiResponse.ok(response);
+    }
+
     @GetMapping("/success")
     @Operation(summary = "Billing success acknowledgement (does not activate subscription)")
     @ApiResponses({

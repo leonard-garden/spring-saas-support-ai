@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -269,6 +270,92 @@ class SubscriptionServiceTest {
         CheckoutResponse response = service.startCheckout(businessId, "admin@test.com", "pro");
 
         assertThat(response.checkoutUrl()).isEqualTo("https://checkout.stripe.com/pay/cs_test_new");
+    }
+
+    // --- cancel tests ---
+
+    @Test
+    @DisplayName("cancelSubscription throws SubscriptionNotCancellableException when no active subscription")
+    void cancelSubscription_noActiveSubscription_throwsNotCancellable() {
+        UUID businessId = UUID.randomUUID();
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.cancelSubscription(businessId))
+                .isInstanceOf(SubscriptionNotCancellableException.class);
+    }
+
+    @Test
+    @DisplayName("cancelSubscription throws SubscriptionNotCancellableException when plan is Free")
+    void cancelSubscription_freePlan_throwsNotCancellable() {
+        UUID businessId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+
+        Subscription sub = subscriptionWith(planId);
+        sub.setStripeSubscriptionId("sub_123");
+        Plan free = planWith(planId, "free");
+
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.of(sub));
+        when(planRepository.findById(planId)).thenReturn(Optional.of(free));
+
+        assertThatThrownBy(() -> service.cancelSubscription(businessId))
+                .isInstanceOf(SubscriptionNotCancellableException.class);
+    }
+
+    @Test
+    @DisplayName("cancelSubscription throws AlreadyCancelledAtPeriodEndException when already scheduled to cancel")
+    void cancelSubscription_alreadyCancelledAtPeriodEnd_throwsAlreadyCancelled() {
+        UUID businessId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+
+        Subscription sub = subscriptionWith(planId);
+        sub.setStripeSubscriptionId("sub_123");
+        sub.setCancelAtPeriodEnd(true);
+        Plan pro = planWith(planId, "pro");
+
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.of(sub));
+        when(planRepository.findById(planId)).thenReturn(Optional.of(pro));
+
+        assertThatThrownBy(() -> service.cancelSubscription(businessId))
+                .isInstanceOf(AlreadyCancelledAtPeriodEndException.class);
+    }
+
+    @Test
+    @DisplayName("cancelSubscription throws SubscriptionNotCancellableException when stripeSubscriptionId is null")
+    void cancelSubscription_noStripeSubId_throwsNotCancellable() {
+        UUID businessId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+
+        Subscription sub = subscriptionWith(planId);
+        Plan pro = planWith(planId, "pro");
+
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.of(sub));
+        when(planRepository.findById(planId)).thenReturn(Optional.of(pro));
+
+        assertThatThrownBy(() -> service.cancelSubscription(businessId))
+                .isInstanceOf(SubscriptionNotCancellableException.class);
+    }
+
+    @Test
+    @DisplayName("cancelSubscription calls StripeService and returns cancelAtPeriodEnd=true with currentPeriodEnd")
+    void cancelSubscription_happyPath_callsStripeAndReturnsResponse() {
+        UUID businessId = UUID.randomUUID();
+        UUID planId = UUID.randomUUID();
+        Instant periodEnd = Instant.parse("2026-07-01T00:00:00Z");
+
+        Subscription sub = subscriptionWith(planId);
+        sub.setStripeSubscriptionId("sub_abc");
+        sub.setCurrentPeriodEnd(periodEnd);
+        Plan pro = planWith(planId, "pro");
+
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.of(sub));
+        when(planRepository.findById(planId)).thenReturn(Optional.of(pro));
+        when(stripeService.cancelAtPeriodEnd(anyString(), anyString())).thenReturn(null);
+
+        CancelSubscriptionResponse response = service.cancelSubscription(businessId);
+
+        assertThat(response.cancelAtPeriodEnd()).isTrue();
+        assertThat(response.currentPeriodEnd()).isEqualTo(periodEnd);
+        verify(stripeService).cancelAtPeriodEnd(anyString(), anyString());
     }
 
     // --- helpers ---
