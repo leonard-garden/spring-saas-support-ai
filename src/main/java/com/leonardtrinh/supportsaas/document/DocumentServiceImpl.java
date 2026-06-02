@@ -174,6 +174,21 @@ public class DocumentServiceImpl implements DocumentService {
         if (!ALLOWED_TYPES.contains(file.getContentType())) {
             throw new FileValidationException("File type not supported. Allowed: pdf, txt, md");
         }
+        validateFilename(file.getOriginalFilename());
+    }
+
+    /**
+     * Rejects filenames containing path traversal sequences (e.g. {@code ..}, {@code /},
+     * {@code \}) or null bytes. Validation happens before MinIO upload so that an attacker
+     * cannot influence the object-key path constructed in {@link #upload}.
+     */
+    private void validateFilename(String name) {
+        if (name == null || name.isBlank()) {
+            return; // sanitizeFilename handles null/blank → "file"
+        }
+        if (name.contains("..") || name.contains("/") || name.contains("\\") || name.contains("\0")) {
+            throw new InvalidFilenameException(name);
+        }
     }
 
     private InputStream getInputStream(MultipartFile file) {
