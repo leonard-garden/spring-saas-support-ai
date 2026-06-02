@@ -24,6 +24,18 @@ public interface SubscriptionService {
     UpgradeResponse upgradeSubscription(UUID businessId, String planSlug);
 
     /**
+     * Schedule a deferred downgrade to a lower-priced plan at the current period end.
+     * Creates a Stripe SubscriptionSchedule so the price change applies automatically
+     * when the billing cycle closes; sets {@code pendingPlanId} on the local record
+     * immediately so the UI can show "downgrade scheduled".
+     *
+     * @throws CannotDowngradeException if the tenant has no Stripe subscription (unpaid trial),
+     *                                   if the target plan price is not lower than the current plan,
+     *                                   or if a downgrade is already pending.
+     */
+    DowngradeResponse downgradeSubscription(UUID businessId, String planSlug);
+
+    /**
      * Reconcile a single subscription's status against Stripe.
      * Called by StripeReconciliationScheduler when a status mismatch is detected.
      */

@@ -2,6 +2,7 @@ package com.leonardtrinh.supportsaas.billing;
 
 import com.stripe.model.Event;
 import com.stripe.model.EventDataObjectDeserializer;
+import com.stripe.model.Price;
 import com.stripe.model.SubscriptionItem;
 import com.stripe.model.SubscriptionItemCollection;
 import com.stripe.model.checkout.Session;
@@ -14,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -91,19 +93,26 @@ class WebhookServiceTest {
     // -----------------------------------------------------------------------
 
     @Test
-    @DisplayName("handle — syncs subscription for customer.subscription.updated when found by stripe ID")
+    @DisplayName("handle — saves updated subscription for customer.subscription.updated when found by stripe ID")
     void handle_subscriptionUpdated_syncsMatchingSubscription() {
         String stripeSubId = "sub_abc123";
-        Event event = mockSubscriptionEvent("evt_003", "customer.subscription.updated", stripeSubId);
-        when(processedWebhookEventRepository.existsByStripeEventId("evt_003")).thenReturn(false);
+        String priceId = "price_pro";
+        UUID planId = UUID.randomUUID();
 
-        Subscription localSub = new Subscription();
+        Subscription localSub = buildSubscription(stripeSubId, planId, null);
+        Event event = mockSubscriptionUpdatedEvent("evt_003", stripeSubId, "active",
+                false, priceId, 100L, 200L);
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_003")).thenReturn(false);
         when(subscriptionRepository.findByStripeSubscriptionId(stripeSubId))
                 .thenReturn(Optional.of(localSub));
 
+        Plan plan = new Plan();
+        when(planRepository.findByStripePriceId(priceId)).thenReturn(Optional.of(plan));
+
         webhookService.handle(event);
 
-        verify(subscriptionService).syncFromStripe(localSub);
+        verify(subscriptionRepository).save(localSub);
+        verify(subscriptionService, never()).syncFromStripe(any());
     }
 
     @Test
@@ -273,6 +282,157 @@ class WebhookServiceTest {
     }
 
     // -----------------------------------------------------------------------
+    // handleSubscriptionUpdated — upgrade / renewal path
+    // -----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("subscriptionUpdated — upgrades planId from Stripe price ID when no pendingPlanId")
+    void handleSubscriptionUpdated_upgradePath_updatesPlanId() {
+        String stripeSubId = "sub_upgrade";
+        String priceId = "price_pro";
+        UUID newPlanId = UUID.randomUUID();
+
+        Subscription localSub = buildSubscription(stripeSubId, null, null);
+        Event event = mockSubscriptionUpdatedEvent("evt_upg1", stripeSubId, "active",
+                false, priceId, epochSecond(100L), epochSecond(200L));
+
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_upg1")).thenReturn(false);
+        when(subscriptionRepository.findByStripeSubscriptionId(stripeSubId))
+                .thenReturn(Optional.of(localSub));
+
+        Plan plan = buildPlanMock(newPlanId, "pro");
+        when(planRepository.findByStripePriceId(priceId)).thenReturn(Optional.of(plan));
+
+        webhookService.handle(event);
+
+        ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+        verify(subscriptionRepository).save(captor.capture());
+        Subscription saved = captor.getValue();
+        assertThat(saved.getPlanId()).isEqualTo(newPlanId);
+        assertThat(saved.getPendingPlanId()).isNull();
+        assertThat(saved.getStatus()).isEqualTo(SubscriptionStatus.ACTIVE);
+        assertThat(saved.isCancelAtPeriodEnd()).isFalse();
+        assertThat(saved.getCurrentPeriodStart()).isEqualTo(Instant.ofEpochSecond(100L));
+        assertThat(saved.getCurrentPeriodEnd()).isEqualTo(Instant.ofEpochSecond(200L));
+    }
+
+    @Test
+    @DisplayName("subscriptionUpdated — applies deferred downgrade when pendingPlanId set and period renewed")
+    void handleSubscriptionUpdated_deferredDowngrade_appliesPendingPlan() {
+        String stripeSubId = "sub_downgrade";
+        UUID currentPlanId = UUID.randomUUID();
+        UUID pendingPlanId = UUID.randomUUID();
+
+        // currentPeriodStart in the past so newPeriodStart (epoch 200) > old (epoch 100)
+        Subscription localSub = buildSubscription(stripeSubId, currentPlanId, pendingPlanId);
+        localSub.setCurrentPeriodStart(Instant.ofEpochSecond(100L));
+
+        Event event = mockSubscriptionUpdatedEvent("evt_dwn1", stripeSubId, "active",
+                false, "price_starter", epochSecond(200L), epochSecond(300L));
+
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_dwn1")).thenReturn(false);
+        when(subscriptionRepository.findByStripeSubscriptionId(stripeSubId))
+                .thenReturn(Optional.of(localSub));
+
+        webhookService.handle(event);
+
+        ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+        verify(subscriptionRepository).save(captor.capture());
+        Subscription saved = captor.getValue();
+        assertThat(saved.getPlanId()).isEqualTo(pendingPlanId);
+        assertThat(saved.getPendingPlanId()).isNull();
+        // planRepository should NOT be consulted on the downgrade path
+        verify(planRepository, never()).findByStripePriceId(any());
+    }
+
+    @Test
+    @DisplayName("subscriptionUpdated — pendingPlanId not applied when period has not yet renewed")
+    void handleSubscriptionUpdated_pendingPlan_periodNotRenewed_noDowngrade() {
+        String stripeSubId = "sub_same_period";
+        UUID currentPlanId = UUID.randomUUID();
+        UUID pendingPlanId = UUID.randomUUID();
+        String priceId = "price_pro";
+
+        // Same currentPeriodStart: no renewal
+        Subscription localSub = buildSubscription(stripeSubId, currentPlanId, pendingPlanId);
+        localSub.setCurrentPeriodStart(Instant.ofEpochSecond(100L));
+
+        Event event = mockSubscriptionUpdatedEvent("evt_pnd1", stripeSubId, "active",
+                false, priceId, epochSecond(100L), epochSecond(200L));
+
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_pnd1")).thenReturn(false);
+        when(subscriptionRepository.findByStripeSubscriptionId(stripeSubId))
+                .thenReturn(Optional.of(localSub));
+
+        UUID upgradePlanId = UUID.randomUUID();
+        Plan upgradePlan = buildPlanMock(upgradePlanId, "pro");
+        when(planRepository.findByStripePriceId(priceId)).thenReturn(Optional.of(upgradePlan));
+
+        webhookService.handle(event);
+
+        ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+        verify(subscriptionRepository).save(captor.capture());
+        Subscription saved = captor.getValue();
+        // downgrade not applied; planId updated via price lookup instead
+        assertThat(saved.getPendingPlanId()).isEqualTo(pendingPlanId);
+        assertThat(saved.getPlanId()).isEqualTo(upgradePlanId);
+    }
+
+    @Test
+    @DisplayName("subscriptionUpdated — syncs cancelAtPeriodEnd and status fields")
+    void handleSubscriptionUpdated_syncsCancelAtPeriodEnd() {
+        String stripeSubId = "sub_cancel_flag";
+
+        Subscription localSub = buildSubscription(stripeSubId, UUID.randomUUID(), null);
+        Event event = mockSubscriptionUpdatedEvent("evt_cancel1", stripeSubId, "active",
+                true, "price_pro", epochSecond(100L), epochSecond(200L));
+
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_cancel1")).thenReturn(false);
+        when(subscriptionRepository.findByStripeSubscriptionId(stripeSubId))
+                .thenReturn(Optional.of(localSub));
+        when(planRepository.findByStripePriceId("price_pro")).thenReturn(Optional.empty());
+
+        webhookService.handle(event);
+
+        ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
+        verify(subscriptionRepository).save(captor.capture());
+        assertThat(captor.getValue().isCancelAtPeriodEnd()).isTrue();
+    }
+
+    @Test
+    @DisplayName("subscriptionUpdated — skips when local subscription not found")
+    void handleSubscriptionUpdated_noLocalMatch_noSave() {
+        String stripeSubId = "sub_missing";
+        Event event = mockSubscriptionUpdatedEvent("evt_miss1", stripeSubId, "active",
+                false, "price_pro", epochSecond(100L), epochSecond(200L));
+
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_miss1")).thenReturn(false);
+        when(subscriptionRepository.findByStripeSubscriptionId(stripeSubId))
+                .thenReturn(Optional.empty());
+
+        webhookService.handle(event);
+
+        verify(subscriptionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("subscriptionUpdated — deserialization failure logs warning without crashing")
+    void handleSubscriptionUpdated_deserializationFails_noException() {
+        Event event = mock(Event.class);
+        when(event.getId()).thenReturn("evt_deser1");
+        when(event.getType()).thenReturn("customer.subscription.updated");
+        when(processedWebhookEventRepository.existsByStripeEventId("evt_deser1")).thenReturn(false);
+
+        EventDataObjectDeserializer deserializer = mock(EventDataObjectDeserializer.class);
+        when(deserializer.getObject()).thenReturn(Optional.empty());
+        when(event.getDataObjectDeserializer()).thenReturn(deserializer);
+
+        webhookService.handle(event);
+
+        verify(subscriptionRepository, never()).save(any());
+    }
+
+    // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------
 
@@ -329,5 +489,73 @@ class WebhookServiceTest {
         lenient().when(stripeSub.getId()).thenReturn(subId);
         lenient().when(stripeSub.getItems()).thenReturn(items);
         return stripeSub;
+    }
+
+    /**
+     * Builds a full {@code customer.subscription.updated} mock event with period timestamps,
+     * status, cancelAtPeriodEnd, and a single subscription item pointing to {@code priceId}.
+     * All item-level stubs are lenient to avoid UnnecessaryStubbingException when a test
+     * exits before reading item fields (e.g. "not found" path).
+     */
+    private Event mockSubscriptionUpdatedEvent(
+            String eventId,
+            String stripeSubId,
+            String status,
+            boolean cancelAtPeriodEnd,
+            String priceId,
+            Long periodStart,
+            Long periodEnd) {
+
+        Price price = mock(Price.class);
+        lenient().when(price.getId()).thenReturn(priceId);
+
+        SubscriptionItem item = mock(SubscriptionItem.class);
+        lenient().when(item.getPrice()).thenReturn(price);
+        lenient().when(item.getCurrentPeriodStart()).thenReturn(periodStart);
+        lenient().when(item.getCurrentPeriodEnd()).thenReturn(periodEnd);
+
+        SubscriptionItemCollection items = mock(SubscriptionItemCollection.class);
+        lenient().when(items.getData()).thenReturn(List.of(item));
+
+        com.stripe.model.Subscription stripeSub = mock(com.stripe.model.Subscription.class);
+        when(stripeSub.getId()).thenReturn(stripeSubId);
+        lenient().when(stripeSub.getStatus()).thenReturn(status);
+        lenient().when(stripeSub.getCancelAtPeriodEnd()).thenReturn(cancelAtPeriodEnd);
+        lenient().when(stripeSub.getItems()).thenReturn(items);
+
+        EventDataObjectDeserializer deserializer = mock(EventDataObjectDeserializer.class);
+        when(deserializer.getObject()).thenReturn(Optional.of(stripeSub));
+
+        Event event = mock(Event.class);
+        when(event.getId()).thenReturn(eventId);
+        when(event.getType()).thenReturn("customer.subscription.updated");
+        when(event.getDataObjectDeserializer()).thenReturn(deserializer);
+        return event;
+    }
+
+    private Subscription buildSubscription(String stripeSubId, UUID planId, UUID pendingPlanId) {
+        Subscription sub = new Subscription();
+        sub.setStripeSubscriptionId(stripeSubId);
+        sub.setPlanId(planId);
+        sub.setPendingPlanId(pendingPlanId);
+        sub.setStatus(SubscriptionStatus.ACTIVE);
+        sub.setUpdatedAt(Instant.now());
+        return sub;
+    }
+
+    /**
+     * Creates a Plan mock. Always assign the result to a variable before passing it to
+     * {@code thenReturn()} — never nest this call inside {@code thenReturn(Optional.of(...))}
+     * because Mockito treats the inner {@code when(...)} as an unfinished stubbing chain.
+     */
+    private Plan buildPlanMock(UUID id, String slug) {
+        Plan plan = mock(Plan.class);
+        when(plan.getId()).thenReturn(id);
+        when(plan.getSlug()).thenReturn(slug);
+        return plan;
+    }
+
+    private Long epochSecond(long second) {
+        return second;
     }
 }

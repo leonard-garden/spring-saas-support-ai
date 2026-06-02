@@ -284,6 +284,71 @@ class ChatServiceTest {
         verify(conversationRepository).save(any(Conversation.class));
     }
 
+    // --- message length validation tests ---
+
+    @Test
+    @DisplayName("streamMessage — message exactly 4000 chars is accepted")
+    void streamMessage_messageExactly4000Chars_accepted() {
+        String exactly4000 = "a".repeat(ChatServiceImpl.MAX_MESSAGE_LENGTH);
+        Conversation conv = buildConversation();
+        when(conversationRepository.findById(CONVERSATION_ID)).thenReturn(Optional.of(conv));
+        doNothing().when(messageUsageService).checkQuota(any(), any());
+        when(hybridSearchService.search(anyString(), anyInt())).thenReturn(Collections.emptyList());
+        when(messageRepository.findTop20ByConversationIdOrderByCreatedAtDesc(CONVERSATION_ID))
+            .thenReturn(Collections.emptyList());
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(anyString())).thenReturn(requestSpec);
+        when(requestSpec.stream()).thenReturn(streamSpec);
+        when(streamSpec.content()).thenReturn(Flux.just("ok"));
+        when(messageRepository.save(any(ChatMessage.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Flux<String> flux = chatService.streamMessage(CONVERSATION_ID, exactly4000, new AtomicReference<>(), null);
+
+        StepVerifier.create(flux)
+            .expectNext("ok")
+            .verifyComplete();
+        // no MessageTooLongException thrown — verified by absence of error above
+    }
+
+    @Test
+    @DisplayName("streamMessage — message 4001 chars throws MessageTooLongException before quota check")
+    void streamMessage_message4001Chars_throwsMessageTooLongException() {
+        String tooLong = "a".repeat(ChatServiceImpl.MAX_MESSAGE_LENGTH + 1);
+
+        assertThatThrownBy(() ->
+            chatService.streamMessage(CONVERSATION_ID, tooLong, new AtomicReference<>(), null))
+            .isInstanceOf(MessageTooLongException.class)
+            .hasMessageContaining("4000");
+
+        // quota check never reached
+        verifyNoInteractions(messageUsageService);
+        verifyNoInteractions(messageRepository);
+    }
+
+    @Test
+    @DisplayName("streamMessage — leading/trailing whitespace is trimmed before length check")
+    void streamMessage_whitespaceTrimmingAppliedBeforeLengthCheck() {
+        // A message that would be too long without trimming but is within limit after trimming
+        String padded = " ".repeat(500) + "hello" + " ".repeat(500);
+        Conversation conv = buildConversation();
+        when(conversationRepository.findById(CONVERSATION_ID)).thenReturn(Optional.of(conv));
+        doNothing().when(messageUsageService).checkQuota(any(), any());
+        when(hybridSearchService.search(anyString(), anyInt())).thenReturn(Collections.emptyList());
+        when(messageRepository.findTop20ByConversationIdOrderByCreatedAtDesc(CONVERSATION_ID))
+            .thenReturn(Collections.emptyList());
+        when(chatClient.prompt()).thenReturn(requestSpec);
+        when(requestSpec.user(anyString())).thenReturn(requestSpec);
+        when(requestSpec.stream()).thenReturn(streamSpec);
+        when(streamSpec.content()).thenReturn(Flux.just("ok"));
+        when(messageRepository.save(any(ChatMessage.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Flux<String> flux = chatService.streamMessage(CONVERSATION_ID, padded, new AtomicReference<>(), null);
+
+        StepVerifier.create(flux)
+            .expectNext("ok")
+            .verifyComplete();
+    }
+
     // --- helpers ---
 
     private Conversation buildConversation() {
