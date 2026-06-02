@@ -9,4 +9,6 @@ public interface AsyncEmailSender {
     void sendEmailVerificationAsync(String email, String token);
 
     void sendTrialExpiredAsync(String email);
+
+    void sendPaymentFailedAsync(String email);
 }
