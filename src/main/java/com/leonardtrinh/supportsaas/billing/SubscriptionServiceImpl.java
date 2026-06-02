@@ -182,6 +182,46 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public DowngradeResponse downgradeSubscription(UUID businessId, String planSlug) {
+        Subscription sub = subscriptionRepository.findActiveByBusinessId(businessId)
+                .orElseThrow(() -> new CannotDowngradeException("No active subscription found."));
+
+        String stripeSubId = sub.getStripeSubscriptionId();
+        if (stripeSubId == null) {
+            throw new CannotDowngradeException(
+                    "Subscription has no Stripe ID — tenant is still on an unpaid trial.");
+        }
+
+        if (sub.getPendingPlanId() != null) {
+            throw new CannotDowngradeException(
+                    "A downgrade is already scheduled. Cancel the pending downgrade before scheduling a new one.");
+        }
+
+        Plan targetPlan = planRepository.findBySlug(planSlug)
+                .orElseThrow(() -> new com.leonardtrinh.supportsaas.common.ResourceNotFoundException("Plan", planSlug));
+
+        if (targetPlan.getStripePriceId() == null) {
+            throw new CannotDowngradeException("Target plan has no Stripe price configured.");
+        }
+
+        Plan currentPlan = planRepository.findById(sub.getPlanId())
+                .orElseThrow(() -> new com.leonardtrinh.supportsaas.auth.PlanMisconfiguredException("unknown"));
+
+        if (targetPlan.getPriceUsdMonthly().compareTo(currentPlan.getPriceUsdMonthly()) >= 0) {
+            throw new CannotDowngradeException(
+                    "Target plan price must be lower than current plan price to downgrade.");
+        }
+
+        String idempotencyKey = businessId + ":downgrade:" + planSlug + ":" + LocalDate.now(ZoneOffset.UTC);
+        stripeService.scheduleSubscriptionUpdate(stripeSubId, targetPlan.getStripePriceId(), idempotencyKey);
+
+        savePendingPlanId(businessId, targetPlan.getId());
+
+        return DowngradeResponse.of(targetPlan.getName(), sub.getCurrentPeriodEnd());
+    }
+
+    @Override
     @Transactional
     public void syncFromStripe(Subscription subscription) {
         com.stripe.model.Subscription stripeSubscription =
@@ -202,6 +242,15 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             case "unpaid" -> SubscriptionStatus.UNPAID;
             default -> SubscriptionStatus.PAST_DUE;
         };
+    }
+
+    @Transactional
+    void savePendingPlanId(UUID businessId, UUID pendingPlanId) {
+        Subscription sub = subscriptionRepository.findActiveByBusinessId(businessId)
+                .orElseThrow(() -> new CannotDowngradeException("Subscription disappeared during downgrade."));
+        sub.setPendingPlanId(pendingPlanId);
+        sub.setUpdatedAt(Instant.now());
+        subscriptionRepository.save(sub);
     }
 
     @Transactional
