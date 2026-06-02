@@ -215,6 +215,13 @@
             <artifactId>stripe-java</artifactId>
             <version>29.2.0</version>
         </dependency>
+
+        <!-- Bucket4j — in-memory IP rate limiting -->
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j-core</artifactId>
+            <version>8.10.1</version>
+        </dependency>
     </dependencies>
 
     <build>

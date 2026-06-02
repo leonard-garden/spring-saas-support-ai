@@ -29,12 +29,15 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtService jwtService;
+    private final RateLimitFilter rateLimitFilter;
     private final List<String> allowedOrigins;
 
     public SecurityConfig(
             JwtService jwtService,
+            RateLimitFilter rateLimitFilter,
             @Value("${app.cors.allowed-origins}") String allowedOriginsRaw) {
         this.jwtService = jwtService;
+        this.rateLimitFilter = rateLimitFilter;
         this.allowedOrigins = Arrays.asList(allowedOriginsRaw.split(","));
     }
 
@@ -91,7 +94,8 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint()))
-            .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(jwtAuthFilter(), RateLimitFilter.class);
 
         return http.build();
     }
