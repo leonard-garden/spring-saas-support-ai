@@ -19,6 +19,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -633,6 +634,50 @@ class SubscriptionServiceTest {
         ArgumentCaptor<Subscription> captor = ArgumentCaptor.forClass(Subscription.class);
         verify(subscriptionRepository).save(captor.capture());
         assertThat(captor.getValue().getPendingPlanId()).isEqualTo(targetPlanId);
+    }
+
+    // --- invoice tests ---
+
+    @Test
+    @DisplayName("getInvoices returns list when stripeCustomerId present")
+    void getInvoices_withStripeCustomerId_returnsInvoiceList() {
+        UUID businessId = UUID.randomUUID();
+        Subscription sub = new Subscription();
+        sub.setStripeCustomerId("cus_test123");
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.of(sub));
+        List<InvoiceResponse> mockInvoices = List.of(
+                new InvoiceResponse("in_001", "2026-05-01", "Pro Plan", 99.0, "paid", "https://invoice.stripe.com/pdf1"));
+        when(stripeService.listInvoices("cus_test123")).thenReturn(mockInvoices);
+
+        List<InvoiceResponse> result = service.getInvoices(businessId);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).id()).isEqualTo("in_001");
+        assertThat(result.get(0).status()).isEqualTo("paid");
+        verify(stripeService).listInvoices("cus_test123");
+    }
+
+    @Test
+    @DisplayName("getInvoices returns empty list when no active subscription")
+    void getInvoices_withNoSubscription_returnsEmptyList() {
+        UUID businessId = UUID.randomUUID();
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.empty());
+
+        List<InvoiceResponse> result = service.getInvoices(businessId);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("getInvoices returns empty list when stripeCustomerId is null")
+    void getInvoices_withNullStripeCustomerId_returnsEmptyList() {
+        UUID businessId = UUID.randomUUID();
+        Subscription sub = new Subscription();
+        when(subscriptionRepository.findActiveByBusinessId(businessId)).thenReturn(Optional.of(sub));
+
+        List<InvoiceResponse> result = service.getInvoices(businessId);
+
+        assertThat(result).isEmpty();
     }
 
     // --- helpers ---

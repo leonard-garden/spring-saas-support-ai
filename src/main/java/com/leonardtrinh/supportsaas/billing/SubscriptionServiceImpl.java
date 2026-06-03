@@ -222,6 +222,16 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public List<InvoiceResponse> getInvoices(UUID businessId) {
+        java.util.Optional<Subscription> sub = subscriptionRepository.findActiveByBusinessId(businessId);
+        if (sub.isEmpty() || sub.get().getStripeCustomerId() == null) {
+            return List.of();
+        }
+        return stripeService.listInvoices(sub.get().getStripeCustomerId());
+    }
+
+    @Override
     @Transactional
     public void syncFromStripe(Subscription subscription) {
         com.stripe.model.Subscription stripeSubscription =
