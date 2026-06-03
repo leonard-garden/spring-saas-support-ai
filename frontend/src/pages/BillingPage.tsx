@@ -1,10 +1,10 @@
 import { useState } from "react"
-import { Zap, Shield, Building2, CheckCircle2, AlertCircle, TrendingUp, Users, FileText, MessageSquare, BookOpen, Download } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Zap, Shield, Building2, CheckCircle2, AlertCircle, TrendingUp, Download } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
 import { CurrentPlanCard } from "@/components/billing/CurrentPlanCard"
 import { StatusBanners } from "@/components/billing/StatusBanners"
+import { UsageCard } from "@/components/billing/UsageCard"
 
 const MOCK_INVOICES = [
   { id: "in_001", date: "2026-05-01", amount: 99, status: "paid", description: "Pro Plan — May 2026", pdfUrl: "#" },
@@ -13,13 +13,6 @@ const MOCK_INVOICES = [
   { id: "in_004", date: "2026-02-01", amount: 29, status: "paid", description: "Starter Plan — Feb 2026", pdfUrl: "#" },
   { id: "in_005", date: "2026-01-01", amount: 29, status: "failed", description: "Starter Plan — Jan 2026", pdfUrl: "#" },
 ]
-
-const MOCK_USAGE = {
-  knowledgeBases: { used: 3, limit: 10 },
-  documents: { used: 127, limit: 500 },
-  messages: { used: 2340, limit: 10000 },
-  members: { used: 4, limit: 10 },
-}
 
 const PLANS = [
   {
@@ -63,60 +56,6 @@ const PLANS = [
     highlight: false,
   },
 ]
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function usagePercent(used: number, limit: number) {
-  if (limit === -1) return 0
-  return Math.min(100, Math.round((used / limit) * 100))
-}
-
-function formatNumber(n: number) {
-  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
-}
-
-// ─── Usage meter ─────────────────────────────────────────────────────────────
-
-function UsageMeter({
-  icon: Icon,
-  label,
-  used,
-  limit,
-}: {
-  icon: React.ElementType
-  label: string
-  used: number
-  limit: number
-}) {
-  const pct = usagePercent(used, limit)
-  const isUnlimited = limit === -1
-  const isWarning = pct >= 80
-  const isCritical = pct >= 95
-
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between text-sm">
-        <span className="flex items-center gap-1.5 text-muted-foreground">
-          <Icon className="h-3.5 w-3.5" />
-          {label}
-        </span>
-        <span className={`font-medium tabular-nums ${isCritical ? "text-red-600" : isWarning ? "text-amber-600" : "text-foreground"}`}>
-          {isUnlimited ? (
-            <span className="text-muted-foreground text-xs">Unlimited</span>
-          ) : (
-            `${formatNumber(used)} / ${formatNumber(limit)}`
-          )}
-        </span>
-      </div>
-      {!isUnlimited && (
-        <Progress
-          value={pct}
-          className={`h-1.5 ${isCritical ? "[&>div]:bg-red-500" : isWarning ? "[&>div]:bg-amber-500" : "[&>div]:bg-primary"}`}
-        />
-      )}
-    </div>
-  )
-}
 
 // ─── Plan card ────────────────────────────────────────────────────────────────
 
@@ -209,7 +148,6 @@ function PlanCard({
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export function BillingPage() {
-  const usage = MOCK_USAGE
   const [selectedPlan, setSelectedPlan] = useState<{ slug: string; direction: "upgrade" | "downgrade" } | null>(null)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
@@ -239,24 +177,8 @@ export function BillingPage() {
         {/* Current plan card — real API data */}
         <CurrentPlanCard onCancelClick={() => setShowCancelConfirm(true)} />
 
-        {/* Usage card */}
-        <Card className="col-span-3">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Usage This Period</CardTitle>
-              <span className="text-xs text-muted-foreground">Resets at period end</span>
-            </div>
-            <CardDescription className="text-xs">
-              Paid plans include a 10% grace period above limits
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <UsageMeter icon={BookOpen} label="Knowledge Bases" used={usage.knowledgeBases.used} limit={usage.knowledgeBases.limit} />
-            <UsageMeter icon={FileText} label="Documents" used={usage.documents.used} limit={usage.documents.limit} />
-            <UsageMeter icon={MessageSquare} label="Messages" used={usage.messages.used} limit={usage.messages.limit} />
-            <UsageMeter icon={Users} label="Members" used={usage.members.used} limit={usage.members.limit} />
-          </CardContent>
-        </Card>
+        {/* Usage card — real API data */}
+        <UsageCard className="col-span-3" />
       </div>
 
       {/* Plans section */}
