@@ -7,7 +7,12 @@ function daysUntil(iso: string): number {
   return Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000))
 }
 
-export function StatusBanners() {
+interface StatusBannersProps {
+  onUpgradeClick?: () => void
+  onUpdatePaymentClick?: () => void
+}
+
+export function StatusBanners({ onUpgradeClick, onUpdatePaymentClick }: StatusBannersProps = {}) {
   const { data: sub, isLoading } = useSubscription()
   const [trialDismissed, setTrialDismissed] = useState(false)
   const [pastDueDismissed, setPastDueDismissed] = useState(false)
@@ -31,7 +36,7 @@ export function StatusBanners() {
             <span className="font-semibold text-amber-700">{daysLeft} days left</span>
             <span className="text-amber-600"> on your {sub.planName} trial. Upgrade to keep access after your trial ends.</span>
           </p>
-          <Button size="sm" className="shrink-0">
+          <Button size="sm" className="shrink-0" onClick={onUpgradeClick}>
             Upgrade Now
           </Button>
           <button
@@ -52,7 +57,7 @@ export function StatusBanners() {
           <p className="text-sm text-red-700 flex-1">
             <span className="font-semibold">Payment failed.</span> Update your payment method to avoid service interruption.
           </p>
-          <Button size="sm" variant="destructive" className="shrink-0">
+          <Button size="sm" variant="destructive" className="shrink-0" onClick={onUpdatePaymentClick}>
             Update Payment
           </Button>
           <button

@@ -7,12 +7,26 @@ import { PlanGrid } from "@/components/billing/PlanGrid"
 import { CancelDialog } from "@/components/billing/CancelDialog"
 import { UpgradeDialog } from "@/components/billing/UpgradeDialog"
 import { DowngradeDialog } from "@/components/billing/DowngradeDialog"
+import { createPortalSession } from "@/lib/billingApi"
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export function BillingPage() {
   const [selectedPlan, setSelectedPlan] = useState<{ slug: string; direction: "upgrade" | "downgrade" } | null>(null)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+
+  function handleUpgradeClick() {
+    document.getElementById("plans-grid")?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  async function handleUpdatePaymentClick() {
+    try {
+      const { url } = await createPortalSession()
+      window.open(url, "_blank")
+    } catch {
+      // Portal session failure is non-critical; surface nothing to the user here
+    }
+  }
 
   return (
     <div className="space-y-8 max-w-5xl">
@@ -26,7 +40,10 @@ export function BillingPage() {
       </div>
 
       {/* Trial / past-due banners */}
-      <StatusBanners />
+      <StatusBanners
+        onUpgradeClick={handleUpgradeClick}
+        onUpdatePaymentClick={handleUpdatePaymentClick}
+      />
 
       {/* Current plan + Usage side by side */}
       <div className="grid grid-cols-5 gap-4">
@@ -35,7 +52,7 @@ export function BillingPage() {
       </div>
 
       {/* Plans section */}
-      <div className="space-y-4">
+      <div id="plans-grid" className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold">Available Plans</h2>
           <p className="text-sm text-muted-foreground">
