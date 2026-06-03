@@ -102,8 +102,14 @@ export function DowngradeDialog({ open, planSlug, onClose }: DowngradeDialogProp
   const targetName = targetPlan?.name ?? planSlug
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-xl border bg-card p-6 shadow-xl space-y-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-xl border bg-card p-6 shadow-xl space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
 
         {/* Header */}
         <div className="space-y-1">
