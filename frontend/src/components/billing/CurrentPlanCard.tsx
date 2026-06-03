@@ -168,7 +168,7 @@ export function CurrentPlanCard({ onCancelClick }: CurrentPlanCardProps) {
           {portalError && (
             <p className="text-xs text-destructive">{portalError}</p>
           )}
-          {!sub.cancelAtPeriodEnd && sub.status !== "CANCELED" && (
+          {!sub.cancelAtPeriodEnd && sub.status !== "CANCELED" && sub.status !== "TRIALING" && (
             <Button
               variant="ghost"
               size="sm"

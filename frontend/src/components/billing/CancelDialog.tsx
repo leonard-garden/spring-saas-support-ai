@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { isAxiosError } from "axios"
 import { Button } from "@/components/ui/button"
 import { cancelSubscription } from "@/lib/billingApi"
 import { useSubscription } from "@/hooks/useBilling"
@@ -23,6 +24,8 @@ export function CancelDialog({ open, onClose }: CancelDialogProps) {
 
   if (!open) return null
 
+  const isTrialing = subscription?.status === "TRIALING"
+
   const periodEndDate = subscription?.currentPeriodEnd
     ? new Date(subscription.currentPeriodEnd).toLocaleDateString("en-US", {
         month: "long",
@@ -31,12 +34,44 @@ export function CancelDialog({ open, onClose }: CancelDialogProps) {
       })
     : null
 
-  const errorMessage =
-    mutation.error instanceof Error
-      ? mutation.error.message
-      : mutation.error != null
-        ? "An unexpected error occurred. Please try again."
-        : null
+  const errorMessage = (() => {
+    if (!mutation.error) return null
+    if (isAxiosError(mutation.error)) {
+      return (
+        (mutation.error.response?.data as { error?: string } | undefined)?.error ??
+        "Failed to cancel subscription. Please try again."
+      )
+    }
+    return "Failed to cancel subscription. Please try again."
+  })()
+
+  // Trial subscriptions expire automatically — no cancellation needed
+  if (isTrialing) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="w-full max-w-sm rounded-xl border bg-card p-6 shadow-xl space-y-4">
+          <div className="space-y-1">
+            <h3 className="font-semibold text-base">No Cancellation Needed</h3>
+            <p className="text-sm text-muted-foreground">
+              Trial subscriptions expire automatically — no cancellation needed. Your trial will
+              end on{" "}
+              {periodEndDate ? (
+                <span className="font-medium text-foreground">{periodEndDate}</span>
+              ) : (
+                "its scheduled date"
+              )}
+              , after which your account moves to the Free plan.
+            </p>
+          </div>
+          <div className="flex justify-end pt-1">
+            <Button variant="outline" onClick={onClose}>
+              Got it
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
