@@ -35,15 +35,22 @@ export function useAuthInit(): void {
           `${API_HOST}${REFRESH_PATH}`,
           { refreshToken }
         )
-        setAccessToken(refreshData.accessToken)
-        setRefreshToken(refreshData.refreshToken)
 
         const { data: me } = await axios.get<MeResponse>(
           `${API_HOST}${ME_PATH}`,
           { headers: { Authorization: `Bearer ${refreshData.accessToken}` } }
         )
 
-        if (!cancelled) setAuth(refreshData.accessToken, me)
+        if (!cancelled) {
+          // Store tokens only after confirming this run is not cancelled.
+          // React StrictMode double-invokes effects in development: the first run
+          // is immediately cancelled (cleanup fires before the async work lands).
+          // If we stored the rotated tokens on the cancelled run, the second run
+          // would try to refresh with an already-used token → 401 → redirect to /login.
+          setAccessToken(refreshData.accessToken)
+          setRefreshToken(refreshData.refreshToken)
+          setAuth(refreshData.accessToken, me)
+        }
       } catch {
         // Any failure (network, expired token, malformed response) → log out.
         // Intentionally broad: unknown auth state is worse than being logged out.

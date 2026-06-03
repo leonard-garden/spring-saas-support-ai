@@ -52,15 +52,15 @@ export function UpgradeDialog({ open, planSlug, onClose }: UpgradeDialogProps) {
               <span className="text-muted-foreground">Current plan</span>
               <span className="font-medium">
                 {currentPlan.name} —{" "}
-                {currentPlan.priceUsdMonthly === 0
+                {currentPlan.priceMonthly === 0
                   ? "Free"
-                  : `$${currentPlan.priceUsdMonthly}/mo`}
+                  : `$${currentPlan.priceMonthly}/mo`}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">New plan</span>
               <span className="font-medium text-primary">
-                {targetPlan.name} — ${targetPlan.priceUsdMonthly}/mo
+                {targetPlan.name} — ${targetPlan.priceMonthly}/mo
               </span>
             </div>
           </div>

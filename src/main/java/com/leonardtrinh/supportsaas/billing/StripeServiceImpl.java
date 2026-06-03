@@ -213,6 +213,23 @@ public class StripeServiceImpl implements StripeService {
     }
 
     @Override
+    public String createPortalSession(String customerId, String returnUrl) {
+        try {
+            com.stripe.param.billingportal.SessionCreateParams params =
+                    com.stripe.param.billingportal.SessionCreateParams.builder()
+                            .setCustomer(customerId)
+                            .setReturnUrl(returnUrl)
+                            .build();
+            com.stripe.model.billingportal.Session session =
+                    com.stripe.model.billingportal.Session.create(params);
+            return session.getUrl();
+        } catch (StripeException e) {
+            log.warn("stripe_call_failed op={} error={}", "create_portal_session", e.getMessage(), e);
+            throw new StripeGatewayException("Failed to create billing portal session", e);
+        }
+    }
+
+    @Override
     public Event constructWebhookEvent(String payload, String sigHeader) {
         try {
             return Webhook.constructEvent(payload, sigHeader, stripeProperties.webhookSecret());

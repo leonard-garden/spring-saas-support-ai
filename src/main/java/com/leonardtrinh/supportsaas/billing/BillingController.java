@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -102,6 +103,19 @@ public class BillingController {
             @Valid @RequestBody UpgradeDowngradeRequest request) {
         DowngradeResponse response = subscriptionService.downgradeSubscription(claims.tenantId(), request.planSlug());
         return ApiResponse.ok(response);
+    }
+
+    @PostMapping("/portal")
+    @Operation(summary = "Create Stripe Customer Portal session")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Portal URL returned"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No active subscription"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Admin role required")
+    })
+    public ApiResponse<Map<String, String>> createPortalSession() {
+        UUID tenantId = TenantContext.getTenantId();
+        String url = subscriptionService.createPortalSession(tenantId);
+        return ApiResponse.ok(Map.of("url", url));
     }
 
     @PostMapping("/cancel")

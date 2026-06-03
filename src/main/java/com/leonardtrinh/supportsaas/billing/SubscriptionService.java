@@ -38,6 +38,14 @@ public interface SubscriptionService {
     DowngradeResponse downgradeSubscription(UUID businessId, String planSlug);
 
     /**
+     * Creates a Stripe Customer Portal session so the tenant can manage their payment method.
+     *
+     * @param businessId  tenant's business UUID
+     * @return            the portal session URL to redirect or open in a new tab
+     */
+    String createPortalSession(UUID businessId);
+
+    /**
      * Reconcile a single subscription's status against Stripe.
      * Called by StripeReconciliationScheduler when a status mismatch is detected.
      */

@@ -31,4 +31,13 @@ public interface StripeService {
     Event constructWebhookEvent(String payload, String sigHeader);
 
     List<InvoiceResponse> listInvoices(String stripeCustomerId);
+
+    /**
+     * Creates a Stripe Billing Portal session for the given customer.
+     *
+     * @param customerId  Stripe customer ID
+     * @param returnUrl   URL to redirect the customer to after they leave the portal
+     * @return            The portal session URL
+     */
+    String createPortalSession(String customerId, String returnUrl);
 }

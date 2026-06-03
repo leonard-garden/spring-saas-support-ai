@@ -21,10 +21,10 @@ export interface Plan {
   id: string
   name: string
   slug: string
-  priceUsdMonthly: number
+  priceMonthly: number
   stripePriceId: string | null
   maxKnowledgeBases: number
-  maxDocumentsPerKb: number
+  maxDocsPerKb: number
   maxMessagesPerMonth: number
   maxMembers: number
   active: boolean
