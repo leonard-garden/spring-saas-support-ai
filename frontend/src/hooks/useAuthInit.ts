@@ -2,7 +2,7 @@ import { useEffect } from "react"
 import axios from "axios"
 import { getRefreshToken, setRefreshToken, setAccessToken } from "@/lib/tokenStorage"
 import { useAuthStore } from "@/store/authStore"
-import type { AuthResponse, MeResponse } from "@/types/auth"
+import type { ApiResponse, AuthResponse, MeResponse } from "@/types/auth"
 
 // VITE_API_URL already contains /api/v1 (e.g. http://localhost:8081/api/v1).
 // Strip it so we can construct full paths explicitly — this keeps the literal
@@ -31,15 +31,17 @@ export function useAuthInit(): void {
       try {
         // Use bare axios (not the api instance) — must NOT go through api's response
         // interceptor to avoid recursive 401 handling on the refresh endpoint itself.
-        const { data: refreshData } = await axios.post<AuthResponse>(
+        const { data: refreshEnvelope } = await axios.post<ApiResponse<AuthResponse>>(
           `${API_HOST}${REFRESH_PATH}`,
           { refreshToken }
         )
+        const refreshData = refreshEnvelope.data!
 
-        const { data: me } = await axios.get<MeResponse>(
+        const { data: meEnvelope } = await axios.get<ApiResponse<MeResponse>>(
           `${API_HOST}${ME_PATH}`,
           { headers: { Authorization: `Bearer ${refreshData.accessToken}` } }
         )
+        const me = meEnvelope.data!
 
         if (!cancelled) {
           // Store tokens only after confirming this run is not cancelled.
