@@ -1,4 +1,5 @@
 import { Loader2 } from "lucide-react"
+import { isAxiosError } from "axios"
 import { useMutation } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { createCheckoutSession } from "@/lib/billingApi"
@@ -26,16 +27,23 @@ export function UpgradeDialog({ open, planSlug, onClose }: UpgradeDialogProps) {
   const targetPlan = plans?.find((p) => p.slug === planSlug)
   const currentPlan = plans?.find((p) => p.slug === subscription?.planSlug)
 
-  const errorMessage =
-    mutation.error instanceof Error
+  const errorMessage = isAxiosError(mutation.error)
+    ? (mutation.error.response?.data?.error ?? "Checkout failed. Please try again.")
+    : mutation.error instanceof Error
       ? mutation.error.message
       : mutation.error != null
         ? "An unexpected error occurred. Please try again."
         : null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-xl border bg-card p-6 shadow-xl space-y-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-sm rounded-xl border bg-card p-6 shadow-xl space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="space-y-1">
           <h3 className="font-semibold text-base">
             Upgrade to {targetPlan?.name ?? planSlug}

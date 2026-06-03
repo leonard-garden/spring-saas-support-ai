@@ -114,6 +114,10 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         String cancelUrl = baseUrl + "/api/v1/billing/checkout/cancel";
         String idempotencyKey = businessId + ":checkout:" + LocalDate.now(ZoneOffset.UTC);
 
+        if (plan.getStripePriceId() == null) {
+            throw new CannotUpgradeException("This plan is not available for purchase. Please contact support.");
+        }
+
         Session session = stripeService.createCheckoutSession(
                 customer.getId(), plan.getStripePriceId(), successUrl, cancelUrl, idempotencyKey);
 
@@ -239,8 +243,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         String stripeCustomerId = sub.getStripeCustomerId();
         if (stripeCustomerId == null) {
-            // Dev/trial mode: no Stripe customer yet — return a stub URL
-            return baseUrl.replace("/api/v1", "") + "/billing";
+            throw new CannotUpgradeException("No billing account on file. Please complete an upgrade first to manage your payment details.");
         }
 
         String returnUrl = baseUrl.replace("/api/v1", "") + "/billing";
