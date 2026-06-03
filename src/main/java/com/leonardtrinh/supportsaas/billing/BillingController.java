@@ -128,6 +128,17 @@ public class BillingController {
         return ApiResponse.ok(usageService.getUsage(tenantId));
     }
 
+    @GetMapping("/invoices")
+    @Operation(summary = "List recent invoices from Stripe (max 12)")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Invoice list returned"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "OWNER role required")
+    })
+    public ApiResponse<List<InvoiceResponse>> getInvoices() {
+        UUID tenantId = TenantContext.getTenantId();
+        return ApiResponse.ok(subscriptionService.getInvoices(tenantId));
+    }
+
     @GetMapping("/success")
     @Operation(summary = "Billing success acknowledgement (does not activate subscription)")
     @ApiResponses({
