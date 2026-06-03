@@ -74,3 +74,9 @@ export async function downgradeSubscription(
   if (!envelope.data) throw new Error("No response from downgrade endpoint")
   return envelope.data
 }
+
+export async function createPortalSession(): Promise<{ url: string }> {
+  const { data: envelope } = await api.post<ApiResponse<{ url: string }>>("/billing/portal")
+  if (!envelope.data) throw new Error("No portal URL returned")
+  return envelope.data
+}
