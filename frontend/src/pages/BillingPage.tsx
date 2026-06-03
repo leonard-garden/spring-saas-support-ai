@@ -6,6 +6,7 @@ import { InvoiceTable } from "@/components/billing/InvoiceTable"
 import { PlanGrid } from "@/components/billing/PlanGrid"
 import { CancelDialog } from "@/components/billing/CancelDialog"
 import { UpgradeDialog } from "@/components/billing/UpgradeDialog"
+import { DowngradeDialog } from "@/components/billing/DowngradeDialog"
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
@@ -56,31 +57,11 @@ export function BillingPage() {
       />
 
       {/* Downgrade dialog */}
-      {selectedPlan && selectedPlan.direction === "downgrade" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-xl border bg-card p-6 shadow-xl space-y-4">
-            <div className="space-y-1">
-              <h3 className="font-semibold text-base">Downgrade to {selectedPlan.slug}?</h3>
-              <p className="text-sm text-muted-foreground">
-                Your plan will change at the{" "}
-                <span className="font-medium">end of the current billing cycle</span>. You keep full
-                access until then.
-              </p>
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button
-                className="flex-1 rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
-                onClick={() => setSelectedPlan(null)}
-              >
-                Keep Current Plan
-              </button>
-              <button className="flex-1 rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 transition-colors">
-                Confirm Downgrade
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DowngradeDialog
+        open={selectedPlan?.direction === "downgrade"}
+        planSlug={selectedPlan?.direction === "downgrade" ? selectedPlan.slug : null}
+        onClose={() => setSelectedPlan(null)}
+      />
 
       {/* Invoice history */}
       <InvoiceTable />
