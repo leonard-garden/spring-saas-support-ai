@@ -7,47 +7,47 @@ Shows all actors (Business Owner, Member, Stripe, Backend Scheduler) and their i
 
 ```mermaid
 flowchart TB
-    %% ── Actors ──────────────────────────────────────────────────
-    Owner(["👤 Business Owner\n(OWNER role)"])
-    Member(["👤 Member\n(MEMBER role)"])
-    Stripe(["🏦 Stripe\n(external)"])
-    Scheduler(["⏰ Backend Scheduler\n(TrialExpiryScheduler)"])
+    %% ── Actors (outside system boundary) ────────────────────────
+    Owner["Business Owner<br/>(OWNER role)"]
+    Member["Member<br/>(MEMBER role)"]
+    Stripe["Stripe<br/>(external)"]
+    Scheduler["TrialExpiryScheduler<br/>(backend cron)"]
 
     %% ── System boundary ─────────────────────────────────────────
-    subgraph BillingUI ["  /billing — Billing Web UI  "]
+    subgraph BillingUI ["/billing — Billing Web UI"]
         direction TB
 
-        subgraph View ["📋 View & Monitor"]
-            UC1(["View Current Plan\n& Status"])
-            UC2(["Monitor Resource Usage\n(KBs / Docs / Messages / Members)"])
-            UC3(["View Payment History\n& Invoices"])
+        subgraph View ["View and Monitor"]
+            UC1(["View Current Plan and Status"])
+            UC2(["Monitor Resource Usage"])
+            UC3(["View Payment History"])
         end
 
-        subgraph Upgrade ["⬆️ Upgrade Flow"]
+        subgraph UpgradeFlow ["Upgrade Flow"]
             UC4(["Select Upgrade Plan"])
-            UC5(["Confirm Upgrade\n(dialog)"])
-            UC6(["Redirect to\nStripe Checkout"])
-            UC7(["View Success Page\n/billing/success"])
+            UC5(["Confirm Upgrade in Dialog"])
+            UC6(["Redirect to Stripe Checkout"])
+            UC7(["View Success Page"])
         end
 
-        subgraph Downgrade ["⬇️ Downgrade Flow"]
+        subgraph DowngradeFlow ["Downgrade Flow"]
             UC8(["Select Downgrade Plan"])
-            UC9(["Confirm Downgrade\n(dialog — deferred)"])
+            UC9(["Confirm Downgrade - deferred"])
         end
 
-        subgraph Cancel ["❌ Cancel Flow"]
+        subgraph CancelFlow ["Cancel Flow"]
             UC10(["Request Cancellation"])
-            UC11(["Confirm Cancel\nat Period End"])
+            UC11(["Confirm Cancel at Period End"])
         end
 
-        subgraph Mgmt ["💳 Account Management"]
-            UC12(["Manage Payment Method\n(Stripe Portal)"])
+        subgraph Mgmt ["Account Management"]
+            UC12(["Manage Payment Method"])
             UC13(["Download Invoice PDF"])
         end
     end
 
     %% ── Denied access ───────────────────────────────────────────
-    DENY["🚫 Access Denied\n(redirect /dashboard)"]
+    DENY["Access Denied — redirect /dashboard"]
 
     %% ── Owner interactions ───────────────────────────────────────
     Owner --> UC1
@@ -59,39 +59,37 @@ flowchart TB
     Owner --> UC12
     Owner --> UC13
 
-    %% ── Upgrade flow chain ───────────────────────────────────────
+    %% ── Upgrade chain ────────────────────────────────────────────
     UC4 --> UC5
     UC5 --> UC6
-    UC6 -->|"Stripe redirect\n(checkout.session.completed)"| Stripe
-    Stripe -->|"Webhook → ACTIVE"| UC7
+    UC6 -->|"checkout.session.completed"| Stripe
+    Stripe -->|"webhook: status=ACTIVE"| UC7
 
-    %% ── Downgrade flow ───────────────────────────────────────────
+    %% ── Downgrade chain ──────────────────────────────────────────
     UC8 --> UC9
-    UC9 -->|"pendingPlanId set\napplied at renewal"| UC1
+    UC9 -->|"pendingPlanId set"| UC1
 
-    %% ── Cancel flow ──────────────────────────────────────────────
+    %% ── Cancel chain ─────────────────────────────────────────────
     UC10 --> UC11
     UC11 -->|"cancelAtPeriodEnd=true"| UC1
 
     %% ── Member blocked ───────────────────────────────────────────
     Member -->|"attempts /billing"| DENY
 
-    %% ── Stripe involvement ───────────────────────────────────────
+    %% ── Stripe links ─────────────────────────────────────────────
     UC12 -->|"external redirect"| Stripe
-    UC13 -->|"PDF URL from Stripe"| Stripe
+    UC13 -->|"PDF URL"| Stripe
 
-    %% ── Scheduler side-effects visible in UC1 ────────────────────
-    Scheduler -->|"Trial expired →\ndowngrade to Free"| UC1
+    %% ── Scheduler side-effect ────────────────────────────────────
+    Scheduler -->|"trial expired: downgrade to Free"| UC1
 
     %% ── Styles ───────────────────────────────────────────────────
-    classDef actor fill:#f5f0e8,stroke:#c9a96e,color:#3d2b00,rx:50
+    classDef actor fill:#f5f0e8,stroke:#c9a96e,color:#3d2b00
     classDef usecase fill:#fff,stroke:#d4a017,color:#1a1a1a
     classDef external fill:#e8f0fe,stroke:#4a7fcb,color:#1a3a6b
     classDef denied fill:#fef2f2,stroke:#dc2626,color:#7f1d1d
-    classDef subgraphStyle fill:#fffbf0,stroke:#e5c57a
 
-    class Owner,Member actor
-    class Scheduler actor
+    class Owner,Member,Scheduler actor
     class UC1,UC2,UC3,UC4,UC5,UC6,UC7,UC8,UC9,UC10,UC11,UC12,UC13 usecase
     class Stripe external
     class DENY denied
