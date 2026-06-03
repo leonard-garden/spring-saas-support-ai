@@ -93,6 +93,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/billing/webhook").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/billing/success").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/v1/billing/checkout").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/v1/billing/usage").hasRole("OWNER")
                 .requestMatchers(HttpMethod.POST, "/api/v1/kb/documents").hasAnyRole("ADMIN", "OWNER")
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/kb/documents/**").hasAnyRole("ADMIN", "OWNER")
                 .requestMatchers(HttpMethod.GET, "/api/v1/kb/**").authenticated()
