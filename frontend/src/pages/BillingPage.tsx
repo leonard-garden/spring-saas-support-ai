@@ -5,6 +5,7 @@ import { UsageCard } from "@/components/billing/UsageCard"
 import { InvoiceTable } from "@/components/billing/InvoiceTable"
 import { PlanGrid } from "@/components/billing/PlanGrid"
 import { CancelDialog } from "@/components/billing/CancelDialog"
+import { UpgradeDialog } from "@/components/billing/UpgradeDialog"
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
@@ -48,29 +49,11 @@ export function BillingPage() {
       </div>
 
       {/* Upgrade dialog */}
-      {selectedPlan && selectedPlan.direction === "upgrade" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-xl border bg-card p-6 shadow-xl space-y-4">
-            <div className="space-y-1">
-              <h3 className="font-semibold text-base">Upgrade to {selectedPlan.slug}</h3>
-              <p className="text-sm text-muted-foreground">
-                You'll be redirected to Stripe to complete your payment. The upgrade takes effect immediately.
-              </p>
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button
-                className="flex-1 rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
-                onClick={() => setSelectedPlan(null)}
-              >
-                Cancel
-              </button>
-              <button className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
-                Continue to Stripe →
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <UpgradeDialog
+        open={selectedPlan?.direction === "upgrade"}
+        planSlug={selectedPlan?.direction === "upgrade" ? selectedPlan.slug : null}
+        onClose={() => setSelectedPlan(null)}
+      />
 
       {/* Downgrade dialog */}
       {selectedPlan && selectedPlan.direction === "downgrade" && (

@@ -12,6 +12,7 @@ import { MembersPage } from "@/pages/MembersPage"
 import { KbPage } from "@/pages/KbPage"
 import { ChatWidgetPage } from "@/pages/ChatWidgetPage"
 import { BillingPage } from "@/pages/BillingPage"
+import { BillingSuccessPage } from "@/pages/BillingSuccessPage"
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 import { AppShell } from "@/components/layout/AppShell"
 import { GuestRoute } from "@/components/auth/GuestRoute"
@@ -39,7 +40,7 @@ function AppRoutes() {
         <Route path="/kb" element={<KbPage />} />
         <Route path="/widget" element={<ChatWidgetPage />} />
         <Route path="/billing" element={<OwnerRoute><BillingPage /></OwnerRoute>} />
-        <Route path="/billing/success" element={<OwnerRoute><BillingPage /></OwnerRoute>} />
+        <Route path="/billing/success" element={<OwnerRoute><BillingSuccessPage /></OwnerRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
