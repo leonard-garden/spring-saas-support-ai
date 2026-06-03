@@ -1,11 +1,10 @@
 import { useState } from "react"
-import { AlertCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { CurrentPlanCard } from "@/components/billing/CurrentPlanCard"
 import { StatusBanners } from "@/components/billing/StatusBanners"
 import { UsageCard } from "@/components/billing/UsageCard"
 import { InvoiceTable } from "@/components/billing/InvoiceTable"
 import { PlanGrid } from "@/components/billing/PlanGrid"
+import { CancelDialog } from "@/components/billing/CancelDialog"
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
@@ -18,22 +17,18 @@ export function BillingPage() {
 
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold">Billing & Plans</h1>
+        <h1 className="text-2xl font-semibold">Billing &amp; Plans</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Manage your subscription and track usage
         </p>
       </div>
 
-      {/* Status banners (trial + past-due, dismissible) */}
+      {/* Trial / past-due banners */}
       <StatusBanners />
 
       {/* Current plan + Usage side by side */}
       <div className="grid grid-cols-5 gap-4">
-
-        {/* Current plan card — real API data */}
         <CurrentPlanCard onCancelClick={() => setShowCancelConfirm(true)} />
-
-        {/* Usage card — real API data */}
         <UsageCard className="col-span-3" />
       </div>
 
@@ -41,7 +36,9 @@ export function BillingPage() {
       <div className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold">Available Plans</h2>
-          <p className="text-sm text-muted-foreground">Upgrade or downgrade at any time. Downgrades take effect at the next billing cycle.</p>
+          <p className="text-sm text-muted-foreground">
+            Upgrade or downgrade at any time. Downgrades take effect at the next billing cycle.
+          </p>
         </div>
 
         <PlanGrid
@@ -61,8 +58,15 @@ export function BillingPage() {
               </p>
             </div>
             <div className="flex gap-2 pt-1">
-              <Button variant="outline" className="flex-1" onClick={() => setSelectedPlan(null)}>Cancel</Button>
-              <Button className="flex-1">Continue to Stripe →</Button>
+              <button
+                className="flex-1 rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
+                onClick={() => setSelectedPlan(null)}
+              >
+                Cancel
+              </button>
+              <button className="flex-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+                Continue to Stripe →
+              </button>
             </div>
           </div>
         </div>
@@ -75,20 +79,21 @@ export function BillingPage() {
             <div className="space-y-1">
               <h3 className="font-semibold text-base">Downgrade to {selectedPlan.slug}?</h3>
               <p className="text-sm text-muted-foreground">
-                Your plan will change at the <span className="font-medium">end of the current billing cycle</span>. You keep full access until then.
+                Your plan will change at the{" "}
+                <span className="font-medium">end of the current billing cycle</span>. You keep full
+                access until then.
               </p>
             </div>
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 space-y-1">
-              <p className="font-medium flex items-center gap-1.5"><AlertCircle className="h-3.5 w-3.5" /> What you'll lose</p>
-              <ul className="pl-5 space-y-0.5 list-disc text-amber-700">
-                <li>Reduced KB and document limits</li>
-                <li>Fewer messages per month</li>
-                <li>Fewer team members</li>
-              </ul>
-            </div>
             <div className="flex gap-2 pt-1">
-              <Button variant="outline" className="flex-1" onClick={() => setSelectedPlan(null)}>Keep Current Plan</Button>
-              <Button variant="destructive" className="flex-1">Confirm Downgrade</Button>
+              <button
+                className="flex-1 rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
+                onClick={() => setSelectedPlan(null)}
+              >
+                Keep Current Plan
+              </button>
+              <button className="flex-1 rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 transition-colors">
+                Confirm Downgrade
+              </button>
             </div>
           </div>
         </div>
@@ -97,27 +102,8 @@ export function BillingPage() {
       {/* Invoice history */}
       <InvoiceTable />
 
-      {/* Cancel dialog */}
-      {showCancelConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-xl border bg-card p-6 shadow-xl space-y-4">
-            <div className="space-y-1">
-              <h3 className="font-semibold text-base">Cancel Subscription?</h3>
-              <p className="text-sm text-muted-foreground">
-                Your subscription will be cancelled at the end of the current billing period.
-                You'll have full access until then.
-              </p>
-            </div>
-            <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
-              After cancellation, your account will downgrade to the <span className="font-medium text-foreground">Free plan</span>.
-            </div>
-            <div className="flex gap-2 pt-1">
-              <Button variant="outline" className="flex-1" onClick={() => setShowCancelConfirm(false)}>Keep Subscription</Button>
-              <Button variant="destructive" className="flex-1">Cancel at Period End</Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Cancel subscription dialog */}
+      <CancelDialog open={showCancelConfirm} onClose={() => setShowCancelConfirm(false)} />
 
     </div>
   )
