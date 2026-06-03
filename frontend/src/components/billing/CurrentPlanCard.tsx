@@ -1,8 +1,10 @@
+import { useState } from "react"
 import { CreditCard, TrendingUp } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useSubscription } from "@/hooks/useBilling"
+import { createPortalSession } from "@/lib/billingApi"
 import type { SubscriptionStatus } from "@/types/billing"
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -53,6 +55,22 @@ interface CurrentPlanCardProps {
 
 export function CurrentPlanCard({ onCancelClick }: CurrentPlanCardProps) {
   const { data: sub, isLoading } = useSubscription()
+  const [portalLoading, setPortalLoading] = useState(false)
+  const [portalError, setPortalError] = useState<string | null>(null)
+
+  const handleManagePayment = async () => {
+    setPortalLoading(true)
+    setPortalError(null)
+    try {
+      const { url } = await createPortalSession()
+      window.open(url, "_blank")
+    } catch (err) {
+      setPortalError("Failed to open billing portal. Please try again.")
+      console.error("Failed to open billing portal", err)
+    } finally {
+      setPortalLoading(false)
+    }
+  }
 
   if (isLoading || !sub) {
     return (
@@ -137,12 +155,19 @@ export function CurrentPlanCard({ onCancelClick }: CurrentPlanCardProps) {
 
         {/* Actions */}
         <div className="pt-1 space-y-2">
-          <Button variant="outline" size="sm" className="w-full text-xs" asChild>
-            <a href="#" target="_blank" rel="noopener noreferrer">
-              <CreditCard className="h-3.5 w-3.5 mr-1.5" />
-              Manage Payment Method
-            </a>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-xs"
+            onClick={handleManagePayment}
+            disabled={portalLoading}
+          >
+            <CreditCard className="h-3.5 w-3.5 mr-1.5" />
+            {portalLoading ? "Opening…" : "Manage Payment Method"}
           </Button>
+          {portalError && (
+            <p className="text-xs text-destructive">{portalError}</p>
+          )}
           {!sub.cancelAtPeriodEnd && sub.status !== "CANCELED" && (
             <Button
               variant="ghost"

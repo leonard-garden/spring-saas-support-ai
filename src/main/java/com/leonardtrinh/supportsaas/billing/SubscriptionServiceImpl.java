@@ -232,6 +232,22 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public String createPortalSession(UUID businessId) {
+        Subscription sub = subscriptionRepository.findActiveByBusinessId(businessId)
+                .orElseThrow(() -> new ResourceNotFoundException("Subscription", businessId));
+
+        String stripeCustomerId = sub.getStripeCustomerId();
+        if (stripeCustomerId == null) {
+            // Dev/trial mode: no Stripe customer yet — return a stub URL
+            return baseUrl.replace("/api/v1", "") + "/billing";
+        }
+
+        String returnUrl = baseUrl.replace("/api/v1", "") + "/billing";
+        return stripeService.createPortalSession(stripeCustomerId, returnUrl);
+    }
+
+    @Override
     @Transactional
     public void syncFromStripe(Subscription subscription) {
         com.stripe.model.Subscription stripeSubscription =
