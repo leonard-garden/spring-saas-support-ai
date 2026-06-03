@@ -6,6 +6,7 @@ import com.stripe.model.Subscription;
 import com.stripe.model.SubscriptionSchedule;
 import com.stripe.model.checkout.Session;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface StripeService {
@@ -28,4 +29,6 @@ public interface StripeService {
     Subscription retrieveSubscription(String subscriptionId);
 
     Event constructWebhookEvent(String payload, String sigHeader);
+
+    List<InvoiceResponse> listInvoices(String stripeCustomerId);
 }

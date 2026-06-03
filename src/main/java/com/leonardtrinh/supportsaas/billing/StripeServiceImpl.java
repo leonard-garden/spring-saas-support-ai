@@ -5,6 +5,7 @@ import com.stripe.exception.StripeException;
 import com.stripe.model.Customer;
 import com.stripe.model.CustomerSearchResult;
 import com.stripe.model.Event;
+import com.stripe.model.Invoice;
 import com.stripe.model.Subscription;
 import com.stripe.model.SubscriptionSchedule;
 import com.stripe.model.checkout.Session;
@@ -12,6 +13,7 @@ import com.stripe.net.RequestOptions;
 import com.stripe.net.Webhook;
 import com.stripe.param.CustomerCreateParams;
 import com.stripe.param.CustomerSearchParams;
+import com.stripe.param.InvoiceListParams;
 import com.stripe.param.SubscriptionScheduleCreateParams;
 import com.stripe.param.SubscriptionUpdateParams;
 import com.stripe.param.checkout.SessionCreateParams;
@@ -20,6 +22,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -160,6 +165,51 @@ public class StripeServiceImpl implements StripeService {
             log.warn("stripe_call_failed op={} error={}", "retrieve_subscription", e.getMessage(), e);
             throw new StripeGatewayException("Failed to retrieve subscription", e);
         }
+    }
+
+    @Override
+    public List<InvoiceResponse> listInvoices(String stripeCustomerId) {
+        try {
+            InvoiceListParams params = InvoiceListParams.builder()
+                    .setCustomer(stripeCustomerId)
+                    .setLimit(12L)
+                    .build();
+            return Invoice.list(params).getData().stream()
+                    .map(inv -> new InvoiceResponse(
+                            inv.getId(),
+                            mapInvoiceDate(inv.getCreated()),
+                            inv.getDescription() != null ? inv.getDescription() : mapInvoiceDescription(inv),
+                            inv.getAmountPaid() / 100.0,
+                            mapInvoiceStatus(inv.getStatus()),
+                            inv.getInvoicePdf()))
+                    .toList();
+        } catch (StripeException e) {
+            log.warn("stripe_call_failed op={} error={}", "list_invoices", e.getMessage(), e);
+            throw new StripeGatewayException("Failed to list invoices", e);
+        }
+    }
+
+    private String mapInvoiceDate(Long epochSeconds) {
+        if (epochSeconds == null) return "";
+        return Instant.ofEpochSecond(epochSeconds)
+                .atOffset(ZoneOffset.UTC)
+                .toLocalDate()
+                .toString();
+    }
+
+    private String mapInvoiceDescription(Invoice inv) {
+        if (inv.getLines() != null && !inv.getLines().getData().isEmpty()) {
+            return inv.getLines().getData().get(0).getDescription();
+        }
+        return "";
+    }
+
+    private String mapInvoiceStatus(String stripeStatus) {
+        if (stripeStatus == null) return "failed";
+        return switch (stripeStatus) {
+            case "paid" -> "paid";
+            default -> "failed";
+        };
     }
 
     @Override
