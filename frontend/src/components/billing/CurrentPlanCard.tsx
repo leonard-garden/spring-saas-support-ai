@@ -143,7 +143,7 @@ export function CurrentPlanCard({ onCancelClick }: CurrentPlanCardProps) {
               Manage Payment Method
             </a>
           </Button>
-          {!sub.cancelAtPeriodEnd && sub.status !== "CANCELED" && (
+          {!sub.cancelAtPeriodEnd && sub.status !== "CANCELED" && sub.status !== "TRIALING" && (
             <Button
               variant="ghost"
               size="sm"
