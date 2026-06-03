@@ -11,6 +11,7 @@ import { DashboardPage } from "@/pages/DashboardPage"
 import { MembersPage } from "@/pages/MembersPage"
 import { KbPage } from "@/pages/KbPage"
 import { ChatWidgetPage } from "@/pages/ChatWidgetPage"
+import { BillingPage } from "@/pages/BillingPage"
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
 import { AppShell } from "@/components/layout/AppShell"
 import { GuestRoute } from "@/components/auth/GuestRoute"
@@ -36,6 +37,7 @@ function AppRoutes() {
         <Route path="/members" element={<MembersPage />} />
         <Route path="/kb" element={<KbPage />} />
         <Route path="/widget" element={<ChatWidgetPage />} />
+        <Route path="/billing" element={<BillingPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
