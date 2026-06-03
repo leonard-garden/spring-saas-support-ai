@@ -1,18 +1,12 @@
 import { useState } from "react"
-import { Zap, Shield, Building2, CheckCircle2, AlertCircle, TrendingUp, Download } from "lucide-react"
+import { Zap, Shield, Building2, CheckCircle2, AlertCircle, TrendingUp } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CurrentPlanCard } from "@/components/billing/CurrentPlanCard"
 import { StatusBanners } from "@/components/billing/StatusBanners"
 import { UsageCard } from "@/components/billing/UsageCard"
+import { InvoiceTable } from "@/components/billing/InvoiceTable"
 
-const MOCK_INVOICES = [
-  { id: "in_001", date: "2026-05-01", amount: 99, status: "paid", description: "Pro Plan — May 2026", pdfUrl: "#" },
-  { id: "in_002", date: "2026-04-01", amount: 99, status: "paid", description: "Pro Plan — Apr 2026", pdfUrl: "#" },
-  { id: "in_003", date: "2026-03-01", amount: 29, status: "paid", description: "Starter Plan — Mar 2026", pdfUrl: "#" },
-  { id: "in_004", date: "2026-02-01", amount: 29, status: "paid", description: "Starter Plan — Feb 2026", pdfUrl: "#" },
-  { id: "in_005", date: "2026-01-01", amount: 29, status: "failed", description: "Starter Plan — Jan 2026", pdfUrl: "#" },
-]
 
 const PLANS = [
   {
@@ -256,66 +250,7 @@ export function BillingPage() {
       )}
 
       {/* Invoice history */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">Payment History</h2>
-            <p className="text-sm text-muted-foreground">All invoices for your account</p>
-          </div>
-        </div>
-
-        <Card>
-          <CardContent className="p-0">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/40">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Date</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Description</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Amount</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                  <th className="px-4 py-3 text-right font-medium text-muted-foreground">Invoice</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {MOCK_INVOICES.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3 text-muted-foreground tabular-nums">
-                      {new Date(inv.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                    </td>
-                    <td className="px-4 py-3 font-medium">{inv.description}</td>
-                    <td className="px-4 py-3 tabular-nums">${inv.amount.toFixed(2)}</td>
-                    <td className="px-4 py-3">
-                      {inv.status === "paid" ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                          <CheckCircle2 className="h-3 w-3" /> Paid
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-xs font-medium text-red-700">
-                          <AlertCircle className="h-3 w-3" /> Failed
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <a
-                        href={inv.pdfUrl}
-                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                        PDF
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {MOCK_INVOICES.length === 0 && (
-              <div className="py-12 text-center text-sm text-muted-foreground">
-                No invoices yet
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <InvoiceTable />
 
       {/* Cancel dialog */}
       {showCancelConfirm && (
