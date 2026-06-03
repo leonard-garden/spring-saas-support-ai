@@ -40,11 +40,11 @@ function buildLossItems(current: Plan, target: Plan): LossItem[] {
     })
   }
 
-  if (target.maxDocumentsPerKb < current.maxDocumentsPerKb) {
+  if (target.maxDocsPerKb < current.maxDocsPerKb) {
     items.push({
       label: "Documents per KB",
-      from: formatLimit(current.maxDocumentsPerKb),
-      to: formatLimit(target.maxDocumentsPerKb),
+      from: formatLimit(current.maxDocsPerKb),
+      to: formatLimit(target.maxDocsPerKb),
     })
   }
 
