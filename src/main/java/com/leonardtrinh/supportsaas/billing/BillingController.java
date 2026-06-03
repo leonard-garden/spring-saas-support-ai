@@ -25,9 +25,11 @@ import java.util.UUID;
 public class BillingController {
 
     private final SubscriptionService subscriptionService;
+    private final UsageService usageService;
 
-    public BillingController(SubscriptionService subscriptionService) {
+    public BillingController(SubscriptionService subscriptionService, UsageService usageService) {
         this.subscriptionService = subscriptionService;
+        this.usageService = usageService;
     }
 
     @GetMapping("/plans")
@@ -113,6 +115,17 @@ public class BillingController {
         UUID tenantId = TenantContext.getTenantId();
         CancelSubscriptionResponse response = subscriptionService.cancelSubscription(tenantId);
         return ApiResponse.ok(response);
+    }
+
+    @GetMapping("/usage")
+    @Operation(summary = "Get current resource usage against plan limits")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Usage data retrieved"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "OWNER role required")
+    })
+    public ApiResponse<UsageResponse> getUsage() {
+        UUID tenantId = TenantContext.getTenantId();
+        return ApiResponse.ok(usageService.getUsage(tenantId));
     }
 
     @GetMapping("/invoices")

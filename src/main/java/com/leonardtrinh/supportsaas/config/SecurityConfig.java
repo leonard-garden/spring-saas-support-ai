@@ -94,6 +94,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/billing/invoices").hasRole("OWNER")
                 .requestMatchers(HttpMethod.GET, "/api/v1/billing/success").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/v1/billing/checkout").hasAnyRole("ADMIN", "OWNER")
+                .requestMatchers(HttpMethod.GET, "/api/v1/billing/usage").hasRole("OWNER")
                 .requestMatchers(HttpMethod.POST, "/api/v1/kb/documents").hasAnyRole("ADMIN", "OWNER")
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/kb/documents/**").hasAnyRole("ADMIN", "OWNER")
                 .requestMatchers(HttpMethod.GET, "/api/v1/kb/**").authenticated()
