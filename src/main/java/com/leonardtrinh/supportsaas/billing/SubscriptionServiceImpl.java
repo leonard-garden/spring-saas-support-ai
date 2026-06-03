@@ -112,7 +112,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         String successUrl = baseUrl + "/api/v1/billing/success?session_id={CHECKOUT_SESSION_ID}";
         String cancelUrl = baseUrl + "/api/v1/billing/checkout/cancel";
-        String idempotencyKey = businessId + ":checkout:" + LocalDate.now(ZoneOffset.UTC);
+        String idempotencyKey = businessId + ":checkout:" + planSlug + ":" + LocalDate.now(ZoneOffset.UTC);
 
         if (plan.getStripePriceId() == null) {
             throw new CannotUpgradeException("This plan is not available for purchase. Please contact support.");
