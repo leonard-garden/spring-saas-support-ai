@@ -5,6 +5,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface SubscriptionService {
+    List<InvoiceResponse> getInvoices(UUID businessId);
+
     Subscription createTrial(UUID businessId);
     Optional<Subscription> getCurrentSubscription(UUID businessId);
     Optional<Plan> getCurrentPlan(UUID businessId);
