@@ -1,20 +1,10 @@
 import { useState } from "react"
-import { CreditCard, Zap, Shield, Building2, CheckCircle2, AlertCircle, Clock, TrendingUp, Users, FileText, MessageSquare, BookOpen, Download, ExternalLink } from "lucide-react"
+import { Zap, Shield, Building2, CheckCircle2, AlertCircle, TrendingUp, Users, FileText, MessageSquare, BookOpen, Download } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-
-// ─── Mock data (replace with API calls later) ────────────────────────────────
-
-const MOCK_SUBSCRIPTION = {
-  status: "TRIALING",
-  planSlug: "pro",
-  planName: "Pro",
-  trialEndsAt: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString(),
-  currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-  cancelAtPeriodEnd: false,
-}
+import { CurrentPlanCard } from "@/components/billing/CurrentPlanCard"
+import { StatusBanners } from "@/components/billing/StatusBanners"
 
 const MOCK_INVOICES = [
   { id: "in_001", date: "2026-05-01", amount: 99, status: "paid", description: "Pro Plan — May 2026", pdfUrl: "#" },
@@ -76,10 +66,6 @@ const PLANS = [
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function daysUntil(iso: string) {
-  return Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000))
-}
-
 function usagePercent(used: number, limit: number) {
   if (limit === -1) return 0
   return Math.min(100, Math.round((used / limit) * 100))
@@ -87,22 +73,6 @@ function usagePercent(used: number, limit: number) {
 
 function formatNumber(n: number) {
   return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; className: string }> = {
-    TRIALING: { label: "Trial", className: "bg-primary/10 text-primary border-primary/20" },
-    ACTIVE: { label: "Active", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-    PAST_DUE: { label: "Past Due", className: "bg-red-50 text-red-700 border-red-200" },
-    CANCELED: { label: "Canceled", className: "bg-stone-100 text-stone-500 border-stone-200" },
-    UNPAID: { label: "Unpaid", className: "bg-red-50 text-red-700 border-red-200" },
-  }
-  const cfg = map[status] ?? { label: status, className: "bg-stone-100 text-stone-500" }
-  return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${cfg.className}`}>
-      {cfg.label}
-    </span>
-  )
 }
 
 // ─── Usage meter ─────────────────────────────────────────────────────────────
@@ -191,7 +161,11 @@ function PlanCard({
             <p className="text-xs text-muted-foreground">{plan.description}</p>
           </div>
         </div>
-        {isCurrent && <StatusBadge status={MOCK_SUBSCRIPTION.status} />}
+        {isCurrent && (
+          <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium bg-primary/10 text-primary border-primary/20">
+            Current
+          </span>
+        )}
       </div>
 
       <div>
@@ -235,13 +209,11 @@ function PlanCard({
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export function BillingPage() {
-  const sub = MOCK_SUBSCRIPTION
   const usage = MOCK_USAGE
   const [selectedPlan, setSelectedPlan] = useState<{ slug: string; direction: "upgrade" | "downgrade" } | null>(null)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
-  const currentPlan = PLANS.find((p) => p.slug === sub.planSlug) ?? PLANS[0]
-  const daysLeft = sub.status === "TRIALING" ? daysUntil(sub.trialEndsAt) : null
+  const currentPlan = PLANS[2] // Pro — kept for plans grid comparison; usage card still uses mock
 
   function handlePlanSelect(slug: string, direction: "upgrade" | "downgrade") {
     setSelectedPlan({ slug, direction })
@@ -258,101 +230,21 @@ export function BillingPage() {
         </p>
       </div>
 
-      {/* Trial banner */}
-      {sub.status === "TRIALING" && (
-        <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
-          <Clock className="h-4 w-4 text-primary shrink-0" />
-          <p className="text-sm">
-            <span className="font-semibold text-primary">{daysLeft} days left</span>
-            <span className="text-muted-foreground"> on your Pro trial. Upgrade to keep access after your trial ends.</span>
-          </p>
-          <Button size="sm" className="ml-auto shrink-0">
-            Upgrade Now
-          </Button>
-        </div>
-      )}
-
-      {/* Past due banner */}
-      {sub.status === "PAST_DUE" && (
-        <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-          <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
-          <p className="text-sm text-red-700">
-            <span className="font-semibold">Payment failed.</span> Update your payment method to avoid service interruption.
-          </p>
-          <Button size="sm" variant="destructive" className="ml-auto shrink-0">
-            Update Payment
-          </Button>
-        </div>
-      )}
+      {/* Status banners (trial + past-due, dismissible) */}
+      <StatusBanners />
 
       {/* Current plan + Usage side by side */}
       <div className="grid grid-cols-5 gap-4">
 
-        {/* Current plan card */}
-        <Card className="col-span-2">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Current Plan</CardTitle>
-              <StatusBadge status={sub.status} />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="rounded-lg bg-primary/10 p-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-display text-xl font-bold">{currentPlan.name}</p>
-                <p className="text-xs text-muted-foreground">${currentPlan.price}/month</p>
-              </div>
-            </div>
-
-            <div className="space-y-1 text-sm">
-              {sub.status === "TRIALING" && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Trial ends</span>
-                  <span className="font-medium text-primary">{daysLeft} days</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Period ends</span>
-                <span className="font-medium">{new Date(sub.currentPeriodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-              </div>
-              {sub.cancelAtPeriodEnd && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Cancels</span>
-                  <span className="font-medium text-red-600">At period end</span>
-                </div>
-              )}
-            </div>
-
-            <div className="pt-1 space-y-2">
-              <Button variant="outline" size="sm" className="w-full text-xs" asChild>
-                <a href="#" target="_blank" rel="noopener noreferrer">
-                  <CreditCard className="h-3.5 w-3.5 mr-1.5" />
-                  Manage Payment Method
-                </a>
-              </Button>
-              {!sub.cancelAtPeriodEnd && sub.status !== "CANCELED" && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full text-xs text-muted-foreground hover:text-destructive"
-                  onClick={() => setShowCancelConfirm(true)}
-                >
-                  Cancel Subscription
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Current plan card — real API data */}
+        <CurrentPlanCard onCancelClick={() => setShowCancelConfirm(true)} />
 
         {/* Usage card */}
         <Card className="col-span-3">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">Usage This Period</CardTitle>
-              <span className="text-xs text-muted-foreground">Resets {new Date(sub.currentPeriodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+              <span className="text-xs text-muted-foreground">Resets at period end</span>
             </div>
             <CardDescription className="text-xs">
               Paid plans include a 10% grace period above limits
@@ -379,7 +271,7 @@ export function BillingPage() {
             <PlanCard
               key={plan.slug}
               plan={plan}
-              isCurrent={plan.slug === sub.planSlug}
+              isCurrent={plan.slug === currentPlan.slug}
               currentPlanPrice={currentPlan.price}
               onSelect={handlePlanSelect}
             />
@@ -510,8 +402,7 @@ export function BillingPage() {
             <div className="space-y-1">
               <h3 className="font-semibold text-base">Cancel Subscription?</h3>
               <p className="text-sm text-muted-foreground">
-                Your subscription will be cancelled at the end of the current period on{" "}
-                <span className="font-medium">{new Date(sub.currentPeriodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</span>.
+                Your subscription will be cancelled at the end of the current billing period.
                 You'll have full access until then.
               </p>
             </div>
