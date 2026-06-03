@@ -57,7 +57,7 @@ export function PlanGrid({ onUpgrade, onDowngrade }: PlanGridProps) {
 
   const currentPlanSlug = subscription?.planSlug ?? "free"
   const currentPlan = plans.find((p) => p.slug === currentPlanSlug)
-  const currentPlanPrice = currentPlan?.priceUsdMonthly ?? 0
+  const currentPlanPrice = currentPlan?.priceMonthly ?? 0
 
   return (
     <div className="grid grid-cols-4 gap-4 pt-3">

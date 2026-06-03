@@ -22,7 +22,7 @@ function formatLimit(n: number): string {
 function buildFeatures(plan: Plan): string[] {
   return [
     `${formatLimit(plan.maxKnowledgeBases)} Knowledge Base${plan.maxKnowledgeBases !== 1 ? "s" : ""}`,
-    `${formatLimit(plan.maxDocumentsPerKb)} Documents/KB`,
+    `${formatLimit(plan.maxDocsPerKb)} Documents/KB`,
     `${formatLimit(plan.maxMessagesPerMonth)} Messages/mo`,
     `${formatLimit(plan.maxMembers)} Member${plan.maxMembers !== 1 ? "s" : ""}`,
   ]
@@ -51,7 +51,7 @@ export function PlanCard({
 }: PlanCardProps) {
   const Icon = SLUG_ICON[plan.slug] ?? TrendingUp
   const highlight = plan.slug === "pro"
-  const isUpgrade = plan.priceUsdMonthly > currentPlanPrice
+  const isUpgrade = plan.priceMonthly > currentPlanPrice
   const features = buildFeatures(plan)
 
   return (
@@ -91,7 +91,7 @@ export function PlanCard({
       </div>
 
       <div>
-        <span className="font-display text-3xl font-bold">${plan.priceUsdMonthly}</span>
+        <span className="font-display text-3xl font-bold">${plan.priceMonthly}</span>
         <span className="text-muted-foreground text-sm">/mo</span>
       </div>
 
