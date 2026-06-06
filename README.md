@@ -20,6 +20,9 @@ A multi-tenant SaaS backend where each business gets an isolated support workspa
 - **RAG pipeline** — hybrid vector + full-text search (PgVector + PostgreSQL FTS), Reciprocal Rank Fusion
 - **Streaming AI chat** — SSE via Spring AI, Claude 3.5 Sonnet in production
 - **Embeddable widget** — single `<script>` tag, vanilla JS, zero dependencies
+- **Billing** — Stripe checkout, upgrade/downgrade, trial, customer portal, webhook lifecycle
+- **Quota enforcement** — per-plan limits on knowledge bases, documents, and chat messages
+- **Production hardening** — rate limiting (Bucket4j), security headers (CSP/HSTS), input sanitization, Actuator health indicators + Micrometer metrics
 
 ---
 
@@ -31,7 +34,9 @@ A multi-tenant SaaS backend where each business gets an isolated support workspa
 | Framework | Spring Boot 3.3 |
 | Database | PostgreSQL 16 + PgVector |
 | Migrations | Flyway |
-| AI | Spring AI — Anthropic Claude (chat) + OpenAI (embeddings) |
+| AI | Spring AI — OpenAI-compatible API (chat + embeddings) |
+| Payment | Stripe Java SDK — subscriptions, webhooks, customer portal |
+| Rate limiting | Bucket4j — IP-based + tenant-based |
 | Auth | JJWT — access (15 min) + refresh (7 days) tokens |
 | Multi-tenancy | Row-level isolation via Hibernate filters |
 | Async | Spring `@Async` + `ThreadPoolTaskExecutor` |
@@ -133,6 +138,21 @@ open http://localhost:3000
 | GET | `/{chatbotId}/config` | Get widget config for embed |
 | POST | `/{chatbotId}/chat` | Stream AI chat response (SSE) |
 
+### Billing — `/api/v1/billing`
+
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| GET | `/plans` | List available plans | Bearer |
+| GET | `/subscription` | Current subscription + status | Bearer |
+| GET | `/usage` | Live resource usage vs quota | Bearer |
+| GET | `/invoices` | Stripe invoice history | Bearer |
+| POST | `/checkout` | Create Stripe checkout session | Bearer |
+| POST | `/upgrade` | Immediate plan upgrade | Bearer |
+| POST | `/downgrade` | Schedule plan downgrade at period end | Bearer |
+| POST | `/cancel` | Cancel subscription at period end | Bearer |
+| POST | `/portal` | Create Stripe customer portal session | Bearer |
+| POST | `/webhook` | Stripe webhook receiver | Stripe-Signature |
+
 ---
 
 ## Embedding the Widget
@@ -211,8 +231,9 @@ mvn verify
 | `DATABASE_PASSWORD` | DB password |
 | `APP_BASE_URL` | Backend Render URL |
 | `CORS_ALLOWED_ORIGINS` | Frontend Render URL |
-| `OPENAI_API_KEY` | For embeddings (`text-embedding-3-small`) |
-| `SPRING_AI_ANTHROPIC_API_KEY` | For chat (`claude-3-5-sonnet-20241022`) |
+| `OPENAI_API_KEY` | For chat + embeddings (OpenAI-compatible endpoint) |
+| `STRIPE_SECRET_KEY` | Stripe secret key (`sk_live_...`) |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret (`whsec_...`) |
 | `MAIL_USERNAME` | SMTP username |
 | `MAIL_PASSWORD` | SMTP password |
 | `MAIL_SENDER` | From address |
@@ -233,7 +254,7 @@ mvn verify
 | M1 | Multi-tenant auth + member management | ✅ v0.1.0 |
 | M2 | Knowledge Base + RAG pipeline (PgVector) | ✅ v0.2.0 |
 | M3 | AI Chat + embeddable JS widget | ✅ v0.3.0 |
-| M4 | Billing (Stripe) + production hardening | Planned |
+| M4 | Billing (Stripe) + production hardening | ✅ v1.0.0 |
 
 ---
 
