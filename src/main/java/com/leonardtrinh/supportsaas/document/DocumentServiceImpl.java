@@ -1,5 +1,6 @@
 package com.leonardtrinh.supportsaas.document;
 
+import com.leonardtrinh.supportsaas.billing.QuotaService;
 import com.leonardtrinh.supportsaas.document.chunk.DocumentChunkRepository;
 import com.leonardtrinh.supportsaas.knowledgebase.KnowledgeBase;
 import com.leonardtrinh.supportsaas.knowledgebase.KnowledgeBaseRepository;
@@ -32,17 +33,20 @@ public class DocumentServiceImpl implements DocumentService {
     private final KnowledgeBaseRepository knowledgeBaseRepository;
     private final MinioService minioService;
     private final DocumentProcessingService processingService;
+    private final QuotaService quotaService;
 
     public DocumentServiceImpl(DocumentRepository documentRepository,
                                 DocumentChunkRepository chunkRepository,
                                 KnowledgeBaseRepository knowledgeBaseRepository,
                                 MinioService minioService,
-                                DocumentProcessingService processingService) {
+                                DocumentProcessingService processingService,
+                                QuotaService quotaService) {
         this.documentRepository = documentRepository;
         this.chunkRepository = chunkRepository;
         this.knowledgeBaseRepository = knowledgeBaseRepository;
         this.minioService = minioService;
         this.processingService = processingService;
+        this.quotaService = quotaService;
     }
 
     @Override
@@ -57,6 +61,9 @@ public class DocumentServiceImpl implements DocumentService {
                     newKb.setBusinessId(tenantId);
                     return knowledgeBaseRepository.save(newKb);
                 });
+
+        long docCount = documentRepository.countByKnowledgeBaseId(kb.getId());
+        quotaService.checkDocumentQuota(tenantId, docCount);
 
         UUID documentId = UUID.randomUUID();
         String objectKey = tenantId + "/" + documentId + "/" + sanitizeFilename(file.getOriginalFilename());
@@ -166,6 +173,21 @@ public class DocumentServiceImpl implements DocumentService {
         }
         if (!ALLOWED_TYPES.contains(file.getContentType())) {
             throw new FileValidationException("File type not supported. Allowed: pdf, txt, md");
+        }
+        validateFilename(file.getOriginalFilename());
+    }
+
+    /**
+     * Rejects filenames containing path traversal sequences (e.g. {@code ..}, {@code /},
+     * {@code \}) or null bytes. Validation happens before MinIO upload so that an attacker
+     * cannot influence the object-key path constructed in {@link #upload}.
+     */
+    private void validateFilename(String name) {
+        if (name == null || name.isBlank()) {
+            return; // sanitizeFilename handles null/blank → "file"
+        }
+        if (name.contains("..") || name.contains("/") || name.contains("\\") || name.contains("\0")) {
+            throw new InvalidFilenameException(name);
         }
     }
 

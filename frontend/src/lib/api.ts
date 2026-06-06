@@ -7,6 +7,7 @@ import {
   setRefreshToken,
   clearTokens,
 } from "./tokenStorage"
+import type { ApiResponse } from "../types/auth"
 
 const baseURL = import.meta.env.VITE_API_URL
 
@@ -37,7 +38,8 @@ async function doRefresh(): Promise<string> {
   if (!refreshToken) throw new Error("No refresh token")
   // Use bare axios (not api) — must NOT go through api's response interceptor,
   // otherwise a refresh-endpoint 401 would recurse back into this function.
-  const { data } = await axios.post<RefreshResponse>(`${baseURL}/auth/refresh`, { refreshToken })
+  const { data: envelope } = await axios.post<ApiResponse<RefreshResponse>>(`${baseURL}/auth/refresh`, { refreshToken })
+  const data = envelope.data
   if (!data?.accessToken || !data?.refreshToken) throw new Error("Malformed refresh response")
   setAccessToken(data.accessToken)
   setRefreshToken(data.refreshToken)

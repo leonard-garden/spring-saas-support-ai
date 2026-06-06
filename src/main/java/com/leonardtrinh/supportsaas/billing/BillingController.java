@@ -1,0 +1,165 @@
+package com.leonardtrinh.supportsaas.billing;
+
+import com.leonardtrinh.supportsaas.auth.JwtClaims;
+import com.leonardtrinh.supportsaas.common.ApiResponse;
+import com.leonardtrinh.supportsaas.common.ResourceNotFoundException;
+import com.leonardtrinh.supportsaas.tenant.TenantContext;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/v1/billing")
+@Tag(name = "Billing", description = "Plan and subscription management")
+public class BillingController {
+
+    private final SubscriptionService subscriptionService;
+    private final UsageService usageService;
+
+    public BillingController(SubscriptionService subscriptionService, UsageService usageService) {
+        this.subscriptionService = subscriptionService;
+        this.usageService = usageService;
+    }
+
+    @GetMapping("/plans")
+    @Operation(summary = "List available plans")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Plans retrieved successfully")
+    })
+    public ApiResponse<List<PlanResponse>> getPlans() {
+        List<PlanResponse> plans = subscriptionService.getActivePlans().stream()
+                .map(PlanResponse::from)
+                .toList();
+        return ApiResponse.ok(plans);
+    }
+
+    @GetMapping("/subscription")
+    @Operation(summary = "Get current subscription")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Subscription retrieved"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No active subscription")
+    })
+    public ApiResponse<SubscriptionResponse> getSubscription() {
+        UUID tenantId = TenantContext.getTenantId();
+
+        Subscription subscription = subscriptionService.getCurrentSubscription(tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Subscription", tenantId));
+
+        Plan plan = subscriptionService.getCurrentPlan(tenantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Plan", subscription.getPlanId()));
+
+        return ApiResponse.ok(SubscriptionResponse.from(subscription, plan));
+    }
+
+    @PostMapping("/checkout")
+    @Operation(summary = "Create Stripe Checkout session")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Checkout URL returned"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Already subscribed or invalid plan"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Admin role required")
+    })
+    public ApiResponse<CheckoutResponse> createCheckout(
+            @AuthenticationPrincipal JwtClaims claims,
+            @Valid @RequestBody CheckoutRequest request) {
+        CheckoutResponse response = subscriptionService.startCheckout(claims.tenantId(), claims.email(), request.planSlug());
+        return ApiResponse.ok(response);
+    }
+
+    @PostMapping("/upgrade")
+    @Operation(summary = "Immediately upgrade to a higher-priced plan with proration")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Upgrade initiated; subscription record updated via webhook"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "No Stripe subscription, or target plan price not higher than current"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Admin role required")
+    })
+    public ApiResponse<UpgradeResponse> upgradeSubscription(
+            @AuthenticationPrincipal JwtClaims claims,
+            @Valid @RequestBody UpgradeDowngradeRequest request) {
+        UpgradeResponse response = subscriptionService.upgradeSubscription(claims.tenantId(), request.planSlug());
+        return ApiResponse.ok(response);
+    }
+
+    @PostMapping("/downgrade")
+    @Operation(summary = "Schedule a deferred downgrade to a lower-priced plan at period end")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Downgrade scheduled; plan changes at end of current billing period"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "No Stripe subscription, target plan price not lower, or downgrade already pending"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Admin role required")
+    })
+    public ApiResponse<DowngradeResponse> downgradeSubscription(
+            @AuthenticationPrincipal JwtClaims claims,
+            @Valid @RequestBody UpgradeDowngradeRequest request) {
+        DowngradeResponse response = subscriptionService.downgradeSubscription(claims.tenantId(), request.planSlug());
+        return ApiResponse.ok(response);
+    }
+
+    @PostMapping("/portal")
+    @Operation(summary = "Create Stripe Customer Portal session")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Portal URL returned"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No active subscription"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Admin role required")
+    })
+    public ApiResponse<Map<String, String>> createPortalSession() {
+        UUID tenantId = TenantContext.getTenantId();
+        String url = subscriptionService.createPortalSession(tenantId);
+        return ApiResponse.ok(Map.of("url", url));
+    }
+
+    @PostMapping("/cancel")
+    @Operation(summary = "Cancel subscription at period end")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Cancellation scheduled"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Free plan or already cancelled"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Admin role required")
+    })
+    public ApiResponse<CancelSubscriptionResponse> cancelSubscription() {
+        UUID tenantId = TenantContext.getTenantId();
+        CancelSubscriptionResponse response = subscriptionService.cancelSubscription(tenantId);
+        return ApiResponse.ok(response);
+    }
+
+    @GetMapping("/usage")
+    @Operation(summary = "Get current resource usage against plan limits")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Usage data retrieved"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "OWNER role required")
+    })
+    public ApiResponse<UsageResponse> getUsage() {
+        UUID tenantId = TenantContext.getTenantId();
+        return ApiResponse.ok(usageService.getUsage(tenantId));
+    }
+
+    @GetMapping("/invoices")
+    @Operation(summary = "List recent invoices from Stripe (max 12)")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Invoice list returned"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "OWNER role required")
+    })
+    public ApiResponse<List<InvoiceResponse>> getInvoices() {
+        UUID tenantId = TenantContext.getTenantId();
+        return ApiResponse.ok(subscriptionService.getInvoices(tenantId));
+    }
+
+    @GetMapping("/success")
+    @Operation(summary = "Billing success acknowledgement (does not activate subscription)")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Checkout acknowledged")
+    })
+    public ApiResponse<String> checkoutSuccess(
+            @RequestParam(name = "session_id", required = false) String sessionId) {
+        return ApiResponse.ok("Checkout initiated. Subscription will be activated after payment confirmation.");
+    }
+}

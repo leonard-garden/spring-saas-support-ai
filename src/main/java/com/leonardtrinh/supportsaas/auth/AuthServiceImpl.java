@@ -2,9 +2,7 @@ package com.leonardtrinh.supportsaas.auth;
 
 import com.leonardtrinh.supportsaas.billing.Plan;
 import com.leonardtrinh.supportsaas.billing.PlanRepository;
-import com.leonardtrinh.supportsaas.billing.Subscription;
-import com.leonardtrinh.supportsaas.billing.SubscriptionRepository;
-import com.leonardtrinh.supportsaas.billing.SubscriptionStatus;
+import com.leonardtrinh.supportsaas.billing.SubscriptionService;
 import com.leonardtrinh.supportsaas.knowledgebase.KnowledgeBaseService;
 import com.leonardtrinh.supportsaas.member.Member;
 import com.leonardtrinh.supportsaas.member.MemberRepository;
@@ -33,7 +31,7 @@ public class AuthServiceImpl implements AuthService {
     private final MemberRepository memberRepository;
     private final BusinessRepository businessRepository;
     private final PlanRepository planRepository;
-    private final SubscriptionRepository subscriptionRepository;
+    private final SubscriptionService subscriptionService;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final AuditLogger auditLogger;
@@ -46,7 +44,7 @@ public class AuthServiceImpl implements AuthService {
             MemberRepository memberRepository,
             BusinessRepository businessRepository,
             PlanRepository planRepository,
-            SubscriptionRepository subscriptionRepository,
+            SubscriptionService subscriptionService,
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
             AuditLogger auditLogger,
@@ -57,7 +55,7 @@ public class AuthServiceImpl implements AuthService {
         this.memberRepository = memberRepository;
         this.businessRepository = businessRepository;
         this.planRepository = planRepository;
-        this.subscriptionRepository = subscriptionRepository;
+        this.subscriptionService = subscriptionService;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.auditLogger = auditLogger;
@@ -76,8 +74,6 @@ public class AuthServiceImpl implements AuthService {
 
         Plan freePlan = planRepository.findBySlug("free")
                 .orElseThrow(() -> new PlanMisconfiguredException("free"));
-        Plan proPlan = planRepository.findBySlug("pro")
-                .orElseThrow(() -> new PlanMisconfiguredException("pro"));
 
         Business business = new Business();
         business.setName(request.businessName());
@@ -94,12 +90,7 @@ public class AuthServiceImpl implements AuthService {
         member.setEmailVerified(false);
         member = memberRepository.save(member);
 
-        Subscription subscription = new Subscription();
-        subscription.setBusinessId(business.getId());
-        subscription.setPlanId(proPlan.getId());
-        subscription.setStatus(SubscriptionStatus.TRIALING);
-        subscription.setTrialEndsAt(Instant.now().plus(14, ChronoUnit.DAYS));
-        subscriptionRepository.save(subscription);
+        subscriptionService.createTrial(business.getId());
 
         byte[] verifyBytes = new byte[32];
         new SecureRandom().nextBytes(verifyBytes);

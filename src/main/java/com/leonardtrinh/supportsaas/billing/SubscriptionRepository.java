@@ -4,6 +4,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,4 +14,25 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
     // Native query — bypasses tenant filter for use in contexts without TenantContext
     @Query(value = "SELECT * FROM subscriptions WHERE business_id = :businessId AND status IN ('ACTIVE', 'TRIALING') ORDER BY created_at DESC LIMIT 1", nativeQuery = true)
     Optional<Subscription> findActiveByBusinessId(@Param("businessId") UUID businessId);
+
+    List<Subscription> findAllByStatusAndTrialEndsAtBefore(SubscriptionStatus status, Instant threshold);
+
+    List<Subscription> findAllByStatusIn(List<SubscriptionStatus> statuses);
+
+    // Native query — bypasses tenant filter; used by webhook handler to locate subscription by Stripe ID
+    @Query(value = "SELECT * FROM subscriptions WHERE stripe_subscription_id = :stripeSubscriptionId LIMIT 1", nativeQuery = true)
+    Optional<Subscription> findByStripeSubscriptionId(@Param("stripeSubscriptionId") String stripeSubscriptionId);
+
+    // Native query — bypasses tenant filter; used by checkout.session.completed handler to find
+    // the tenant's subscription via the Stripe customer ID set during checkout flow
+    @Query(value = "SELECT * FROM subscriptions WHERE stripe_customer_id = :stripeCustomerId ORDER BY created_at DESC LIMIT 1", nativeQuery = true)
+    Optional<Subscription> findByStripeCustomerId(@Param("stripeCustomerId") String stripeCustomerId);
+
+    // Native query — bypasses tenant filter; returns the owner email for a given tenant's subscription
+    @Query(value = """
+            SELECT m.email FROM members m
+            WHERE m.business_id = :businessId AND m.role = 'OWNER'
+            LIMIT 1
+            """, nativeQuery = true)
+    Optional<String> findOwnerEmailByBusinessId(@Param("businessId") UUID businessId);
 }

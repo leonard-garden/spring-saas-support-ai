@@ -25,4 +25,14 @@ public class NoOpEmailService implements EmailService {
     public void sendInvitationEmail(String toEmail, String rawToken) {
         log.warn("Mail not configured. Invitation email NOT sent to {}", toEmail);
     }
+
+    @Override
+    public void sendTrialExpiredEmail(String toEmail) {
+        log.warn("Mail not configured. Trial expired email NOT sent to {}", toEmail);
+    }
+
+    @Override
+    public void sendPaymentFailedEmail(String toEmail) {
+        log.warn("Mail not configured. Payment failed email NOT sent to {}", toEmail);
+    }
 }

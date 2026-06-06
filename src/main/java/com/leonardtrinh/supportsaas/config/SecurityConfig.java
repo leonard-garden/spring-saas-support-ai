@@ -29,12 +29,18 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtService jwtService;
+    private final RateLimitFilter rateLimitFilter;
+    private final TenantRateLimitFilter tenantRateLimitFilter;
     private final List<String> allowedOrigins;
 
     public SecurityConfig(
             JwtService jwtService,
+            RateLimitFilter rateLimitFilter,
+            TenantRateLimitFilter tenantRateLimitFilter,
             @Value("${app.cors.allowed-origins}") String allowedOriginsRaw) {
         this.jwtService = jwtService;
+        this.rateLimitFilter = rateLimitFilter;
+        this.tenantRateLimitFilter = tenantRateLimitFilter;
         this.allowedOrigins = Arrays.asList(allowedOriginsRaw.split(","));
     }
 
@@ -76,19 +82,28 @@ public class SecurityConfig {
                     "/api/v1/invitations/accept",
                     "/api/v1/widget/**",
                     "/widget.js",
-                    "/actuator/**",
+                    "/actuator/health",
+                    "/actuator/health/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/api-docs/**",
                     "/v3/api-docs/**"
                 ).permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/billing/plans").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/billing/webhook").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/billing/invoices").hasRole("OWNER")
+                .requestMatchers(HttpMethod.GET, "/api/v1/billing/success").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/v1/billing/checkout").hasAnyRole("ADMIN", "OWNER")
+                .requestMatchers(HttpMethod.GET, "/api/v1/billing/usage").hasRole("OWNER")
                 .requestMatchers(HttpMethod.POST, "/api/v1/kb/documents").hasAnyRole("ADMIN", "OWNER")
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/kb/documents/**").hasAnyRole("ADMIN", "OWNER")
                 .requestMatchers(HttpMethod.GET, "/api/v1/kb/**").authenticated()
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint()))
-            .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(jwtAuthFilter(), RateLimitFilter.class)
+            .addFilterAfter(tenantRateLimitFilter, JwtAuthFilter.class);
 
         return http.build();
     }

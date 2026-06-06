@@ -7,4 +7,8 @@ public interface AsyncEmailSender {
     void sendPasswordResetAsync(String email, String token);
 
     void sendEmailVerificationAsync(String email, String token);
+
+    void sendTrialExpiredAsync(String email);
+
+    void sendPaymentFailedAsync(String email);
 }

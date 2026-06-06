@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 public class ChatServiceImpl implements ChatService {
 
     private static final int RAG_TOP_K = 5;
+    static final int MAX_MESSAGE_LENGTH = 4000;
     private static final DateTimeFormatter YEAR_MONTH_FMT =
             DateTimeFormatter.ofPattern("yyyy-MM").withZone(ZoneOffset.UTC);
 
@@ -116,36 +117,42 @@ public class ChatServiceImpl implements ChatService {
         UUID tenantId = TenantContext.getTenantId();
         String yearMonth = YEAR_MONTH_FMT.format(Instant.now());
 
-        // 1. Quota check — throws QuotaExceededException before any DB write
+        // 1. Input validation — trim then check max length before any DB write
+        String trimmedQuery = query == null ? "" : query.strip();
+        if (trimmedQuery.length() > MAX_MESSAGE_LENGTH) {
+            throw new MessageTooLongException(MAX_MESSAGE_LENGTH);
+        }
+
+        // 2. Quota check — throws QuotaExceededException before any DB write
         messageUsageService.checkQuota(tenantId, yearMonth);
 
-        // 2. Verify conversation exists
+        // 3. Verify conversation exists
         conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new ConversationNotFoundException(conversationId));
 
-        // 3. Save USER message
+        // 4. Save USER message (use trimmed content)
         ChatMessage userMessage = new ChatMessage();
         userMessage.setBusinessId(tenantId);
         userMessage.setConversationId(conversationId);
         userMessage.setRole(MessageRole.USER);
-        userMessage.setContent(query);
+        userMessage.setContent(trimmedQuery);
         messageRepository.save(userMessage);
 
-        // 4. RAG retrieval
-        List<SearchResult> chunks = hybridSearchService.search(query, RAG_TOP_K);
+        // 5. RAG retrieval
+        List<SearchResult> chunks = hybridSearchService.search(trimmedQuery, RAG_TOP_K);
         if (sourcesRef != null) {
             sourcesRef.set(chunks);
         }
 
-        // 5. Load conversation history (last 20, DESC, then reverse for chronological order)
+        // 6. Load conversation history (last 20, DESC, then reverse for chronological order)
         List<ChatMessage> historyDesc = messageRepository
                 .findTop20ByConversationIdOrderByCreatedAtDesc(conversationId);
         List<ChatMessage> history = historyDesc.reversed();
 
-        // 6. Build prompt
-        String prompt = buildPrompt(query, chunks, history);
+        // 7. Build prompt
+        String prompt = buildPrompt(trimmedQuery, chunks, history);
 
-        // 7. Stream from LLM — accumulate tokens for persistence after completion
+        // 8. Stream from LLM — accumulate tokens for persistence after completion
         // tenantId captured here on the HTTP thread; Reactor completion callback runs on a
         // different thread where TenantContext (ThreadLocal) would otherwise be empty.
         AtomicReference<StringBuilder> accumulator = new AtomicReference<>(new StringBuilder());
