@@ -32,17 +32,20 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final BusinessRepository businessRepository;
     private final StripeService stripeService;
     private final String baseUrl;
+    private final String frontendUrl;
 
     public SubscriptionServiceImpl(SubscriptionRepository subscriptionRepository,
                                    PlanRepository planRepository,
                                    BusinessRepository businessRepository,
                                    StripeService stripeService,
-                                   @Value("${app.base-url:http://localhost:8081}") String baseUrl) {
+                                   @Value("${app.base-url:http://localhost:8081}") String baseUrl,
+                                   @Value("${app.frontend-url:http://localhost:3000}") String frontendUrl) {
         this.subscriptionRepository = subscriptionRepository;
         this.planRepository = planRepository;
         this.businessRepository = businessRepository;
         this.stripeService = stripeService;
         this.baseUrl = baseUrl;
+        this.frontendUrl = frontendUrl;
     }
 
     @Override
@@ -110,9 +113,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         saveStripeCustomerId(businessId, customer.getId());
 
-        String successUrl = baseUrl + "/api/v1/billing/success?session_id={CHECKOUT_SESSION_ID}";
-        String cancelUrl = baseUrl + "/api/v1/billing/checkout/cancel";
-        String idempotencyKey = businessId + ":checkout:" + planSlug + ":" + LocalDate.now(ZoneOffset.UTC);
+        String successUrl = frontendUrl + "/billing/success?session_id={CHECKOUT_SESSION_ID}";
+        String cancelUrl = frontendUrl + "/billing";
+        String idempotencyKey = businessId + ":checkout:" + planSlug + ":" + UUID.randomUUID();
 
         if (plan.getStripePriceId() == null) {
             throw new CannotUpgradeException("This plan is not available for purchase. Please contact support.");
@@ -288,5 +291,12 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Business", businessId));
         business.setStripeCustomerId(customerId);
         businessRepository.save(business);
+
+        // Mirror onto the subscription so webhook handlers can locate it via stripe_customer_id
+        subscriptionRepository.findActiveByBusinessId(businessId).ifPresent(sub -> {
+            sub.setStripeCustomerId(customerId);
+            sub.setUpdatedAt(Instant.now());
+            subscriptionRepository.save(sub);
+        });
     }
 }

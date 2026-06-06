@@ -64,7 +64,7 @@ class BillingServiceTest {
     void setUp() {
         checkoutService = new SubscriptionServiceImpl(
                 subscriptionRepository, planRepository, businessRepository,
-                stripeService, "http://localhost:8081");
+                stripeService, "http://localhost:8081", "http://localhost:3000");
 
         webhookService = new WebhookServiceImpl(
                 processedWebhookEventRepository,
@@ -114,7 +114,7 @@ class BillingServiceTest {
 
             CheckoutResponse response = checkoutService.startCheckout(businessId, "admin@example.com", "pro");
 
-            assertThat(response.checkoutUrl())
+            assertThat(response.url())
                     .isEqualTo("https://checkout.stripe.com/pay/cs_test_happy");
             verify(stripeService).getOrCreateCustomer("admin@example.com", businessId);
             verify(stripeService).createCheckoutSession(
@@ -149,7 +149,7 @@ class BillingServiceTest {
 
             CheckoutResponse response = checkoutService.startCheckout(businessId, "owner@example.com", "starter");
 
-            assertThat(response.checkoutUrl())
+            assertThat(response.url())
                     .isEqualTo("https://checkout.stripe.com/pay/cs_new");
         }
     }

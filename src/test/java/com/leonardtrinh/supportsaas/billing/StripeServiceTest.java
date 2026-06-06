@@ -13,6 +13,7 @@ import com.stripe.net.Webhook;
 import com.stripe.param.CustomerCreateParams;
 import com.stripe.param.CustomerSearchParams;
 import com.stripe.param.SubscriptionScheduleCreateParams;
+import com.stripe.param.SubscriptionScheduleUpdateParams;
 import com.stripe.param.SubscriptionUpdateParams;
 import com.stripe.param.checkout.SessionCreateParams;
 import org.junit.jupiter.api.BeforeEach;
@@ -160,6 +161,15 @@ class StripeServiceTest {
     @DisplayName("scheduleSubscriptionUpdate creates schedule with idempotency key")
     void scheduleSubscriptionUpdate_happyPath_createsSchedule() throws Exception {
         SubscriptionSchedule schedule = mock(SubscriptionSchedule.class);
+
+        // Stub phases auto-populated by from_subscription so the second step can read them
+        SubscriptionSchedule.Phase phase = mock(SubscriptionSchedule.Phase.class);
+        SubscriptionSchedule.Phase.Item item = mock(SubscriptionSchedule.Phase.Item.class);
+        when(item.getPrice()).thenReturn("price_current");
+        when(phase.getItems()).thenReturn(List.of(item));
+        when(phase.getEndDate()).thenReturn(null);
+        when(schedule.getPhases()).thenReturn(List.of(phase));
+        when(schedule.update(any(SubscriptionScheduleUpdateParams.class))).thenReturn(schedule);
 
         try (MockedStatic<SubscriptionSchedule> mockedSchedule = mockStatic(SubscriptionSchedule.class)) {
             mockedSchedule.when(() -> SubscriptionSchedule.create(

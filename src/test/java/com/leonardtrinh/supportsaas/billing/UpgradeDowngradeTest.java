@@ -56,7 +56,7 @@ class UpgradeDowngradeTest {
         service = new SubscriptionServiceImpl(
                 subscriptionRepository, planRepository,
                 businessRepository, stripeService,
-                "http://localhost:8081");
+                "http://localhost:8081", "http://localhost:3000");
     }
 
     // -----------------------------------------------------------------------

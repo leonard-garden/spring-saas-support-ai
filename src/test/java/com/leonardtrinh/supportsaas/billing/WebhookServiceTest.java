@@ -1,6 +1,7 @@
 package com.leonardtrinh.supportsaas.billing;
 
 import com.leonardtrinh.supportsaas.email.AsyncEmailSender;
+import com.stripe.exception.EventDataObjectDeserializationException;
 import com.stripe.model.Event;
 import com.stripe.model.EventDataObjectDeserializer;
 import com.stripe.model.Invoice;
@@ -26,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -139,7 +141,7 @@ class WebhookServiceTest {
 
     @Test
     @DisplayName("handle — deserialization failure logs warning without crashing")
-    void handle_subscriptionEvent_deserializationFails_noException() {
+    void handle_subscriptionEvent_deserializationFails_noException() throws Exception {
         Event event = mock(Event.class);
         when(event.getId()).thenReturn("evt_005");
         when(event.getType()).thenReturn("customer.subscription.created");
@@ -147,6 +149,7 @@ class WebhookServiceTest {
 
         EventDataObjectDeserializer deserializer = mock(EventDataObjectDeserializer.class);
         when(deserializer.getObject()).thenReturn(Optional.empty());
+        doThrow(new EventDataObjectDeserializationException("test", null)).when(deserializer).deserializeUnsafe();
         when(event.getDataObjectDeserializer()).thenReturn(deserializer);
 
         // Should not throw
@@ -209,7 +212,7 @@ class WebhookServiceTest {
 
     @Test
     @DisplayName("handle — invoice.payment_succeeded: deserialization failure does not throw")
-    void handle_invoicePaymentSucceeded_deserializationFails_noException() {
+    void handle_invoicePaymentSucceeded_deserializationFails_noException() throws Exception {
         Event event = mockEventWithEmptyDeserializer("evt_012", "invoice.payment_succeeded");
         when(processedWebhookEventRepository.existsByStripeEventId("evt_012")).thenReturn(false);
 
@@ -290,7 +293,7 @@ class WebhookServiceTest {
 
     @Test
     @DisplayName("handle — subscription.deleted with deserialization failure logs warning without crash")
-    void handle_subscriptionDeleted_deserializationFails_noException() {
+    void handle_subscriptionDeleted_deserializationFails_noException() throws Exception {
         Event event = mock(Event.class);
         when(event.getId()).thenReturn("evt_016");
         when(event.getType()).thenReturn("customer.subscription.deleted");
@@ -298,6 +301,7 @@ class WebhookServiceTest {
 
         EventDataObjectDeserializer deserializer = mock(EventDataObjectDeserializer.class);
         when(deserializer.getObject()).thenReturn(Optional.empty());
+        doThrow(new EventDataObjectDeserializationException("test", null)).when(deserializer).deserializeUnsafe();
         when(event.getDataObjectDeserializer()).thenReturn(deserializer);
 
         // Should not throw
@@ -399,7 +403,7 @@ class WebhookServiceTest {
 
     @Test
     @DisplayName("handle — checkout.session.completed skips when deserialization fails")
-    void handle_checkoutCompleted_deserializationFails_skips() {
+    void handle_checkoutCompleted_deserializationFails_skips() throws Exception {
         Event event = mock(Event.class);
         when(event.getId()).thenReturn("evt_checkout_004");
         when(event.getType()).thenReturn("checkout.session.completed");
@@ -407,6 +411,7 @@ class WebhookServiceTest {
 
         EventDataObjectDeserializer deserializer = mock(EventDataObjectDeserializer.class);
         when(deserializer.getObject()).thenReturn(Optional.empty());
+        doThrow(new EventDataObjectDeserializationException("test", null)).when(deserializer).deserializeUnsafe();
         when(event.getDataObjectDeserializer()).thenReturn(deserializer);
 
         webhookService.handle(event);
@@ -489,7 +494,7 @@ class WebhookServiceTest {
 
     @Test
     @DisplayName("handle — invoice.payment_failed: deserialization failure does not throw")
-    void handle_invoicePaymentFailed_deserializationFails_noException() {
+    void handle_invoicePaymentFailed_deserializationFails_noException() throws Exception {
         Event event = mockEventWithEmptyDeserializer("evt_023", "invoice.payment_failed");
         when(processedWebhookEventRepository.existsByStripeEventId("evt_023")).thenReturn(false);
 
@@ -635,7 +640,7 @@ class WebhookServiceTest {
 
     @Test
     @DisplayName("subscriptionUpdated — deserialization failure logs warning without crashing")
-    void handleSubscriptionUpdated_deserializationFails_noException() {
+    void handleSubscriptionUpdated_deserializationFails_noException() throws Exception {
         Event event = mock(Event.class);
         when(event.getId()).thenReturn("evt_deser1");
         when(event.getType()).thenReturn("customer.subscription.updated");
@@ -643,6 +648,7 @@ class WebhookServiceTest {
 
         EventDataObjectDeserializer deserializer = mock(EventDataObjectDeserializer.class);
         when(deserializer.getObject()).thenReturn(Optional.empty());
+        doThrow(new EventDataObjectDeserializationException("test", null)).when(deserializer).deserializeUnsafe();
         when(event.getDataObjectDeserializer()).thenReturn(deserializer);
 
         webhookService.handle(event);
@@ -704,9 +710,12 @@ class WebhookServiceTest {
         return event;
     }
 
-    private Event mockEventWithEmptyDeserializer(String id, String type) {
+    private Event mockEventWithEmptyDeserializer(String id, String type) throws Exception {
         EventDataObjectDeserializer deserializer = mock(EventDataObjectDeserializer.class);
         when(deserializer.getObject()).thenReturn(Optional.empty());
+        try {
+            doThrow(new EventDataObjectDeserializationException("test", null)).when(deserializer).deserializeUnsafe();
+        } catch (EventDataObjectDeserializationException ignored) {}
 
         Event event = mock(Event.class);
         when(event.getId()).thenReturn(id);

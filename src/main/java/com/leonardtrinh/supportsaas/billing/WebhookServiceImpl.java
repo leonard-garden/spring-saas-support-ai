@@ -1,6 +1,7 @@
 package com.leonardtrinh.supportsaas.billing;
 
 import com.leonardtrinh.supportsaas.email.AsyncEmailSender;
+import com.stripe.exception.EventDataObjectDeserializationException;
 import com.stripe.model.Event;
 import com.stripe.model.Invoice;
 import com.stripe.model.Invoice.Parent;
@@ -70,7 +71,7 @@ public class WebhookServiceImpl implements WebhookService {
     }
 
     private void handleCheckoutCompleted(Event event) {
-        Optional<StripeObject> objectOpt = event.getDataObjectDeserializer().getObject();
+        Optional<StripeObject> objectOpt = deserialize(event);
         if (objectOpt.isEmpty()) {
             log.warn("webhook_checkout_deserialization_failed event_id={}", event.getId());
             return;
@@ -129,7 +130,7 @@ public class WebhookServiceImpl implements WebhookService {
     }
 
     private void handleInvoicePaymentSucceeded(Event event) {
-        Optional<StripeObject> objectOpt = event.getDataObjectDeserializer().getObject();
+        Optional<StripeObject> objectOpt = deserialize(event);
         if (objectOpt.isEmpty()) {
             log.warn("webhook_deserialization_failed event_id={} type={}", event.getId(), event.getType());
             return;
@@ -164,7 +165,7 @@ public class WebhookServiceImpl implements WebhookService {
     }
 
     private void handleInvoicePaymentFailed(Event event) {
-        Optional<StripeObject> objectOpt = event.getDataObjectDeserializer().getObject();
+        Optional<StripeObject> objectOpt = deserialize(event);
         if (objectOpt.isEmpty()) {
             log.warn("webhook_deserialization_failed event_id={} type={}", event.getId(), event.getType());
             return;
@@ -199,7 +200,7 @@ public class WebhookServiceImpl implements WebhookService {
     }
 
     private void handleSubscriptionEvent(Event event) {
-        Optional<StripeObject> objectOpt = event.getDataObjectDeserializer().getObject();
+        Optional<StripeObject> objectOpt = deserialize(event);
         if (objectOpt.isEmpty()) {
             log.warn("webhook_deserialization_failed event_id={} type={}", event.getId(), event.getType());
             return;
@@ -222,7 +223,7 @@ public class WebhookServiceImpl implements WebhookService {
     }
 
     private void handleSubscriptionDeleted(Event event) {
-        Optional<StripeObject> objectOpt = event.getDataObjectDeserializer().getObject();
+        Optional<StripeObject> objectOpt = deserialize(event);
         if (objectOpt.isEmpty()) {
             log.warn("webhook_deserialization_failed event_id={} type={}", event.getId(), event.getType());
             return;
@@ -271,7 +272,7 @@ public class WebhookServiceImpl implements WebhookService {
      * and {@code currentPeriodEnd} are always synced from the Stripe payload.
      */
     private void handleSubscriptionUpdated(Event event) {
-        Optional<StripeObject> objectOpt = event.getDataObjectDeserializer().getObject();
+        Optional<StripeObject> objectOpt = deserialize(event);
         if (objectOpt.isEmpty()) {
             log.warn("webhook_deserialization_failed event_id={} type=customer.subscription.updated",
                     event.getId());
@@ -361,5 +362,24 @@ public class WebhookServiceImpl implements WebhookService {
             case "unpaid" -> SubscriptionStatus.UNPAID;
             default -> SubscriptionStatus.PAST_DUE;
         };
+    }
+
+    /**
+     * Deserializes the event's data object, falling back to {@code deserializeUnsafe()} when the
+     * Stripe-SDK API version doesn't match the webhook's API version (common in local dev with the
+     * Stripe CLI, which forwards events using the dashboard account version).
+     */
+    private Optional<StripeObject> deserialize(Event event) {
+        Optional<StripeObject> result = event.getDataObjectDeserializer().getObject();
+        if (result.isPresent()) {
+            return result;
+        }
+        try {
+            return Optional.of(event.getDataObjectDeserializer().deserializeUnsafe());
+        } catch (EventDataObjectDeserializationException e) {
+            log.warn("webhook_deserialization_failed event_id={} type={} err={}",
+                    event.getId(), event.getType(), e.getMessage());
+            return Optional.empty();
+        }
     }
 }

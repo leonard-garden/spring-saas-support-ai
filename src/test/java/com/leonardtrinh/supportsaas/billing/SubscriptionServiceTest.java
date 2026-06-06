@@ -51,7 +51,7 @@ class SubscriptionServiceTest {
     @BeforeEach
     void setUp() {
         service = new SubscriptionServiceImpl(subscriptionRepository, planRepository,
-                businessRepository, stripeService, "http://localhost:8081");
+                businessRepository, stripeService, "http://localhost:8081", "http://localhost:3000");
     }
 
     @Test
@@ -246,7 +246,7 @@ class SubscriptionServiceTest {
 
         CheckoutResponse response = service.startCheckout(businessId, "admin@test.com", "starter");
 
-        assertThat(response.checkoutUrl()).isEqualTo("https://checkout.stripe.com/pay/cs_test_trialing");
+        assertThat(response.url()).isEqualTo("https://checkout.stripe.com/pay/cs_test_trialing");
     }
 
     @Test
@@ -274,7 +274,7 @@ class SubscriptionServiceTest {
 
         CheckoutResponse response = service.startCheckout(businessId, "admin@test.com", "pro");
 
-        assertThat(response.checkoutUrl()).isEqualTo("https://checkout.stripe.com/pay/cs_test_new");
+        assertThat(response.url()).isEqualTo("https://checkout.stripe.com/pay/cs_test_new");
     }
 
     // --- cancel tests ---

@@ -115,7 +115,7 @@ class BillingIT extends BaseIT {
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(resp.getBody()).isNotNull();
         assertThat(resp.getBody().success()).isTrue();
-        assertThat(resp.getBody().data().checkoutUrl()).isEqualTo("https://checkout.stripe.com/pay/test_session");
+        assertThat(resp.getBody().data().url()).isEqualTo("https://checkout.stripe.com/pay/test_session");
     }
 
     // -------------------------------------------------------------------------
