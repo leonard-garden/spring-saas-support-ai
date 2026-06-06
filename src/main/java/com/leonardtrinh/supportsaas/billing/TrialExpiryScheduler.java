@@ -3,8 +3,7 @@ package com.leonardtrinh.supportsaas.billing;
 import com.leonardtrinh.supportsaas.email.AsyncEmailSender;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,10 +21,10 @@ import java.util.List;
  * <p>Does NOT use TenantContext — queries native SQL via SubscriptionRepository which
  * already bypasses the Hibernate tenant filter.
  */
+@Slf4j
 @Component
 public class TrialExpiryScheduler {
 
-    private static final Logger log = LoggerFactory.getLogger(TrialExpiryScheduler.class);
     private static final String PLAN_FREE = "free";
 
     private final SubscriptionRepository subscriptionRepository;
