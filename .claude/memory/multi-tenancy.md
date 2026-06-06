@@ -188,7 +188,7 @@ Other cases needing `TenantContext.getTenantId()` in service: quota checks, audi
 
 1. Every business entity MUST extend `TenantEntity`
 2. `TenantContext.clear()` MUST be in a `finally` block — no exceptions
-3. `@Async` methods MUST declare `@Async("taskExecutor")` — not bare `@Async`
+3. `@Async` methods MUST declare a named executor — not bare `@Async`. Use `@Async("processingExecutor")` for document ingestion, `@Async("taskExecutor")` for email/audit/webhooks
 4. `disableFilter` is ONLY allowed in `Admin*` repository classes
 5. `spring.threads.virtual.enabled=false` — virtual threads break ThreadLocal scoping
 6. Service MUST call `TenantContext.getTenantId()` when creating entities — Hibernate filter does NOT auto-set `business_id` on save

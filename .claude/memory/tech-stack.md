@@ -38,8 +38,7 @@ type: project
 - `spring-boot-starter-security`
 - `spring-boot-starter-validation`
 - `spring-boot-starter-actuator`
-- `spring-ai-anthropic-spring-boot-starter`
-- `spring-ai-openai-spring-boot-starter` (embeddings only)
+- `spring-ai-starter-model-openai` (chat + embeddings via OpenAI-compatible API)
 - `spring-ai-pgvector-store-spring-boot-starter`
 - `postgresql`
 - `flyway-core`
@@ -50,7 +49,7 @@ type: project
 
 ## What was explicitly rejected (with reason)
 
-- **Lombok** → Java 21 records are cleaner
+- **Lombok** (data annotations: `@Data`, `@Builder`, `@RequiredArgsConstructor`) → Java 21 records are cleaner. `@Slf4j` is allowed as an exception for logging.
 - **Kafka/RabbitMQ** → `@Async` sufficient until proven otherwise
 - **Microservices** → monolith first, split if data proves need
 - **ElasticSearch** → PgVector + PG full-text is enough

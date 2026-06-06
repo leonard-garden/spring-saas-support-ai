@@ -2,8 +2,7 @@ package com.leonardtrinh.supportsaas.billing;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -18,10 +17,9 @@ import java.util.List;
  * <p>Does NOT use TenantContext — processes subscriptions across all tenants using
  * SubscriptionRepository queries that bypass the Hibernate tenant filter.
  */
+@Slf4j
 @Component
 public class StripeReconciliationScheduler {
-
-    private static final Logger log = LoggerFactory.getLogger(StripeReconciliationScheduler.class);
 
     private final SubscriptionRepository subscriptionRepository;
     private final SubscriptionService subscriptionService;

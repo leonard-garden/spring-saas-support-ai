@@ -20,23 +20,16 @@ Two goals in priority order:
 
 ## Current milestone
 
-**Milestone 1: Multi-tenant Foundation** (Days 1–7)
+**All milestones shipped — v1.0.0 released (2026-06-06)**
 
-Checklist:
-- [ ] Spring Boot 3.3 + Java 21 project setup
-- [ ] Docker compose: postgres + adminer + mailhog
-- [ ] Business + Member entities + Flyway migrations
-- [ ] TenantContext (ThreadLocal) + Hibernate filter
-- [ ] JwtService with tenant_id claim
-- [ ] Signup (creates Business + Owner), Login, Refresh, Logout
-- [ ] Member invitation email flow + accept endpoint
-- [ ] List/remove members, change role
-- [ ] `TenantIsolationIT` integration test (CRITICAL)
-- [ ] GlobalExceptionHandler + OpenAPI config
-- [ ] Deploy to Render free tier
-- [ ] README v0.1 + Release v0.1.0
+| Milestone | Status | Release |
+|-----------|--------|---------|
+| M1 | ✅ Shipped | v0.1.0 |
+| M2 | ✅ Shipped | v0.2.0 |
+| M3 | ✅ Shipped | v0.3.0 |
+| M4 | ✅ Shipped | v1.0.0 |
 
-**After M1:** Apply 5–10 jobs targeting "Multi-tenant Spring Boot", "SaaS architecture", "Spring Security"
+**Next:** Post-launch cleanup (issue #276), README update, job applications.
 
 ## Roadmap summary
 

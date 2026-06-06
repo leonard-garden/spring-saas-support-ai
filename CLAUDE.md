@@ -58,9 +58,11 @@ com.leonardtrinh.supportsaas
 │   └── search/     # HybridSearchService, SearchController
 ├── storage/        # MinioService (object storage)
 ├── email/          # AsyncEmailSender (no-op dev / Spring Mail prod)
-├── billing/        # Plan, Subscription stubs
-├── chat/           # (M3 stub) AI chat via Spring AI streaming SSE
-├── chatbot/        # (M3 stub) Embeddable widget backend
+├── admin/          # Super-admin endpoints (cross-tenant, filter disabled)
+├── audit/          # AuditLogger, audit event recording
+├── billing/        # Stripe integration — plans, subscriptions, checkout, webhooks, quota
+├── chat/           # AI chat via Spring AI streaming SSE, embeddable widget backend
+├── chatbot/        # Chatbot entity, configuration, knowledge base linking
 ├── common/         # ApiResponse<T>, TenantEntity, GlobalExceptionHandler, AppException
 └── config/         # SecurityConfig, AsyncConfig, OpenApiConfig, RequestIdFilter
 ```
@@ -109,7 +111,9 @@ POST /api/v1/kb/documents/upload
 
 `JwtAuthFilter` sets `TenantContext.setTenantId()` and clears it in `finally`. `TenantFilterAspect` (AOP) enables the Hibernate filter before every repository call. All business entities extend `TenantEntity` which carries `businessId` and the filter definition.
 
-`@Async` methods **must** use `@Async("processingExecutor")` (never bare `@Async`) — `AsyncConfig` wires `TenantContextCopyingDecorator` on that executor to propagate `tenantId` to worker threads.
+`@Async` methods **must** use a named executor (never bare `@Async`) — `AsyncConfig` wires `TenantContextCopyingDecorator` on both executors to propagate `tenantId` to worker threads:
+- `@Async("processingExecutor")` — document ingestion pipeline
+- `@Async("taskExecutor")` — email sending, audit logging, webhook delivery
 
 Virtual threads are **disabled** (`spring.threads.virtual.enabled=false`) because `ThreadLocal`-based `TenantContext` is incompatible with virtual thread pinning semantics.
 
@@ -117,7 +121,7 @@ Virtual threads are **disabled** (`spring.threads.virtual.enabled=false`) becaus
 
 ## Coding rules
 
-- **No Lombok** — use Java 21 records for DTOs, modern syntax elsewhere
+- **No Lombok** — use Java 21 records for DTOs, modern syntax elsewhere. **Exception: `@Slf4j` is allowed** for logging (annotation-only, no code generation concerns)
 - **No H2** — integration tests use Testcontainers (`PostgreSQLContainer`)
 - **No JdbcTemplate** — use `@Modifying @Query(nativeQuery=true)` on `JpaRepository` even for pgvector/tsvector casts
 - **No Kafka/RabbitMQ** — `@Async` + `ThreadPoolTaskExecutor`
@@ -172,5 +176,5 @@ Code style: **Spotless** with google-java-format is planned but not yet configur
 
 ## Current milestone
 
-**M3 — AI Chat + Embeddable Widget** (`v0.3`). See GitHub milestone for open issues.
-`chat/` and `chatbot/` packages are stubs — streaming SSE via Spring AI is the target implementation.
+**M4 shipped — v1.0.0** (Billing + Production Hardening). All 4 milestones complete.
+Next: post-launch cleanup, README update, job applications.

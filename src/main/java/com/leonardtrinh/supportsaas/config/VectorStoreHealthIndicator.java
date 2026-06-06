@@ -1,8 +1,8 @@
 package com.leonardtrinh.supportsaas.config;
 
+import jakarta.persistence.EntityManager;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 @Component("vectorStore")
@@ -11,16 +11,18 @@ public class VectorStoreHealthIndicator implements HealthIndicator {
     private static final String PGVECTOR_PING_SQL =
             "SELECT extversion FROM pg_extension WHERE extname = 'vector'";
 
-    private final JdbcTemplate jdbcTemplate;
+    private final EntityManager entityManager;
 
-    public VectorStoreHealthIndicator(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    public VectorStoreHealthIndicator(EntityManager entityManager) {
+        this.entityManager = entityManager;
     }
 
     @Override
     public Health health() {
         try {
-            String version = jdbcTemplate.queryForObject(PGVECTOR_PING_SQL, String.class);
+            String version = (String) entityManager
+                    .createNativeQuery(PGVECTOR_PING_SQL)
+                    .getSingleResult();
             if (version != null) {
                 return Health.up()
                         .withDetail("extension", "vector")

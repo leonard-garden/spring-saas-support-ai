@@ -1,7 +1,6 @@
 package com.leonardtrinh.supportsaas.auth;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,10 +11,9 @@ import java.time.Instant;
  * Weekly scheduler that purges expired refresh tokens from the refresh_tokens table.
  * Runs every Monday at 03:00 UTC to prevent unbounded table growth (FR-033).
  */
+@Slf4j
 @Component
 public class ProcessedJtiCleanupScheduler {
-
-    private static final Logger log = LoggerFactory.getLogger(ProcessedJtiCleanupScheduler.class);
 
     private final RefreshTokenRepository refreshTokenRepository;
 
