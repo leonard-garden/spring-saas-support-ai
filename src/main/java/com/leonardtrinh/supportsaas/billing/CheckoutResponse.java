@@ -1,3 +1,3 @@
 package com.leonardtrinh.supportsaas.billing;
 
-public record CheckoutResponse(String checkoutUrl) {}
+public record CheckoutResponse(String url) {}

@@ -15,6 +15,7 @@ import com.stripe.param.CustomerCreateParams;
 import com.stripe.param.CustomerSearchParams;
 import com.stripe.param.InvoiceListParams;
 import com.stripe.param.SubscriptionScheduleCreateParams;
+import com.stripe.param.SubscriptionScheduleUpdateParams;
 import com.stripe.param.SubscriptionUpdateParams;
 import com.stripe.param.checkout.SessionCreateParams;
 import jakarta.annotation.PostConstruct;
@@ -138,19 +139,39 @@ public class StripeServiceImpl implements StripeService {
                                                             String newPriceId,
                                                             String idempotencyKey) {
         try {
-            SubscriptionScheduleCreateParams params = SubscriptionScheduleCreateParams.builder()
-                    .setFromSubscription(subscriptionId)
-                    .addPhase(SubscriptionScheduleCreateParams.Phase.builder()
-                            .addItem(SubscriptionScheduleCreateParams.Phase.Item.builder()
-                                    .setPrice(newPriceId)
-                                    .build())
-                            .build())
-                    .setEndBehavior(SubscriptionScheduleCreateParams.EndBehavior.RELEASE)
-                    .build();
+            // Stripe forbids setting phases when from_subscription is used — create first,
+            // then update to append the downgrade phase after the current period.
             RequestOptions options = RequestOptions.builder()
                     .setIdempotencyKey(idempotencyKey)
                     .build();
-            return SubscriptionSchedule.create(params, options);
+            SubscriptionScheduleCreateParams createParams = SubscriptionScheduleCreateParams.builder()
+                    .setFromSubscription(subscriptionId)
+                    .setEndBehavior(SubscriptionScheduleCreateParams.EndBehavior.RELEASE)
+                    .build();
+            SubscriptionSchedule schedule = SubscriptionSchedule.create(createParams, options);
+
+            // Carry the current phase forward, then add the new price as the next phase
+            SubscriptionSchedule.Phase current = schedule.getPhases().get(0);
+            String currentPriceId = current.getItems().get(0).getPrice();
+
+            SubscriptionScheduleUpdateParams updateParams = SubscriptionScheduleUpdateParams.builder()
+                    .addPhase(SubscriptionScheduleUpdateParams.Phase.builder()
+                            .addItem(SubscriptionScheduleUpdateParams.Phase.Item.builder()
+                                    .setPrice(currentPriceId)
+                                    .setQuantity(1L)
+                                    .build())
+                            .setEndDate(current.getEndDate())
+                            .build())
+                    .addPhase(SubscriptionScheduleUpdateParams.Phase.builder()
+                            .addItem(SubscriptionScheduleUpdateParams.Phase.Item.builder()
+                                    .setPrice(newPriceId)
+                                    .build())
+                            .build())
+                    .setEndBehavior(SubscriptionScheduleUpdateParams.EndBehavior.RELEASE)
+                    .build();
+            schedule.update(updateParams);
+
+            return schedule;
         } catch (StripeException e) {
             log.warn("stripe_call_failed op={} error={}", "schedule_subscription_update", e.getMessage(), e);
             throw new StripeGatewayException("Failed to schedule subscription update", e);

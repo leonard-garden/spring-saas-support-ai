@@ -100,6 +100,9 @@ export function DowngradeDialog({ open, planSlug, onClose }: DowngradeDialogProp
     currentPlan && targetPlan ? buildLossItems(currentPlan, targetPlan) : []
 
   const targetName = targetPlan?.name ?? planSlug
+  const alreadyScheduled =
+    subscription?.pendingPlanId != null ||
+    (isAxiosError(mutation.error) && mutation.error.response?.status === 400)
 
   return (
     <div
@@ -121,64 +124,80 @@ export function DowngradeDialog({ open, planSlug, onClose }: DowngradeDialogProp
           </p>
         </div>
 
-        {/* Amber warning */}
-        <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>Takes effect at the end of your current billing cycle.</span>
-        </div>
+        {alreadyScheduled ? (
+          /* Blocked state — downgrade already pending */
+          <>
+            <div className="flex gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>A downgrade is already scheduled for the end of this billing cycle. You cannot schedule another one until it takes effect.</span>
+            </div>
+            <Button variant="outline" className="w-full" onClick={onClose}>
+              Close
+            </Button>
+          </>
+        ) : (
+          /* Normal confirmation flow */
+          <>
+            {/* Amber timing notice */}
+            <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>Takes effect at the end of your current billing cycle.</span>
+            </div>
 
-        {/* What you'll lose */}
-        {lossItems.length > 0 && (
-          <div className="rounded-lg bg-muted p-3 space-y-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Limits that will decrease
-            </p>
-            <ul className="space-y-1">
-              {lossItems.map((item) => (
-                <li key={item.label} className="flex items-center justify-between text-sm">
-                  <span className="text-foreground">{item.label}</span>
-                  <span className="text-muted-foreground">
-                    <span className="line-through">{item.from}</span>
-                    {" → "}
-                    <span className="font-medium text-foreground">{item.to}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Inline error */}
-        {mutation.error != null && (
-          <p className="text-sm text-destructive">{getErrorMessage(mutation.error)}</p>
-        )}
-
-        {/* Actions */}
-        <div className="flex gap-2 pt-1">
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={onClose}
-            disabled={mutation.isPending}
-          >
-            Keep Current Plan
-          </Button>
-          <Button
-            variant="destructive"
-            className="flex-1"
-            disabled={mutation.isPending}
-            onClick={() => mutation.mutate()}
-          >
-            {mutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Scheduling…
-              </>
-            ) : (
-              "Confirm Downgrade"
+            {/* What you'll lose */}
+            {lossItems.length > 0 && (
+              <div className="rounded-lg bg-muted p-3 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Limits that will decrease
+                </p>
+                <ul className="space-y-1">
+                  {lossItems.map((item) => (
+                    <li key={item.label} className="flex items-center justify-between text-sm">
+                      <span className="text-foreground">{item.label}</span>
+                      <span className="text-muted-foreground">
+                        <span className="line-through">{item.from}</span>
+                        {" → "}
+                        <span className="font-medium text-foreground">{item.to}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
-          </Button>
-        </div>
+
+            {/* Inline error (non-400 errors only) */}
+            {mutation.error != null && !alreadyScheduled && (
+              <p className="text-sm text-destructive">{getErrorMessage(mutation.error)}</p>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-1">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={onClose}
+                disabled={mutation.isPending}
+              >
+                Keep Current Plan
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                disabled={mutation.isPending}
+                onClick={() => mutation.mutate()}
+              >
+                {mutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Scheduling…
+                  </>
+                ) : (
+                  "Confirm Downgrade"
+                )}
+              </Button>
+            </div>
+          </>
+        )}
 
       </div>
     </div>

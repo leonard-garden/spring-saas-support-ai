@@ -4,7 +4,7 @@ spring:
       - org.springframework.ai.model.anthropic.autoconfigure.AnthropicChatAutoConfiguration
   ai:
     openai:
-      api-key: ${OPENAI_API_KEY:dev-placeholder}
+#      api-key: ${OPENAI_API_KEY:dev-placeholder}
       chat:
         options:
           model: gpt-4o-mini
@@ -36,8 +36,12 @@ spring:
           starttls:
             enable: false
 
+stripe:
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_replace_me_with_stripe_cli_output}
+
 app:
   base-url: http://localhost:8081
+  frontend-url: http://localhost:5173
   cors:
     allowed-origins: http://localhost:3000,http://localhost:5173,null
 
